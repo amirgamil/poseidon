@@ -1,6 +1,6 @@
-# Poseidon  🔱i️
+# Poseidon  🔱
 ## Intro
-Poseidon is, to use a nice description by Reef, is an anti-framework. It's a a no-dependency, component-based Javascript framework for rendering UI on the web. It aims at being lightweight, fast, and intuitive (i.e. easy to use) for building static and dynamic apps without compromising on .....
+Poseidon is, to use a nice description by Reef, an anti-framework. It's a a no-dependency, component-based Javascript framework for rendering UI on the web. It aims at being lightweight, fast, and intuitive (i.e. easy to use) for building static and dynamic apps without compromising on .....
 
 
 ### Goals

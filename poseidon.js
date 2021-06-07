@@ -5,36 +5,41 @@
 2. 
 */
 
-function createTextElement(text) {
-    return {
-        tag: 'TEXT_ELEMENT',
-        children: {
-            nodeValue: text
-        }
+
+function updateAttributes(vNode, node) {
+    if (vNode.attributes !== undefined) {
+        Object.keys(vNode.attributes)
+          .forEach((key, _) => {
+            node[key] = vNode.attributes[key];
+        })
     }
+    return node;
 }
 
 
-//right now does not handle diffing/updates
-const renderVDOM = (node) => {
-    const domNode = typeof node === "object" ? document.createElement(node.tag) : document.createTextNode(node);
-    if (node.attributes !== undefined) {
-        Object.keys(node.attributes)
-          .forEach((key, _) => {
-            domNode[key] = node.attributes[key];
-        })
+//simple diffing works
+const renderVDOM = (newVNode, prevVNode, prevDOM) => {
+    const sameType = prevVNode && newVNode && newVNode.tag === prevVNode.tag;
+    var domNode;
+    if (sameType) {
+        domNode = updateAttributes(newVNode, prevVNode);
+    } else {
+        domNode = newVNode.tag !== "TEXT_ELEMENT" ? document.createElement(newVNode.tag) : document.createTextNode(newVNode.nodeValue);
+        if (prevDOM) {
+            //remove child node and replace with newly created one
+            prevDOM.replaceWith(domNode);
+        }
+        domNode = updateAttributes(newVNode, domNode);
     }
-
-    if (node.events !== undefined) {
-        Object.keys(node.events)
+    if (newVNode.events !== undefined) {
+        Object.keys(newVNode.events)
               .forEach(key => {
-                  domNode.addEventListener(key, node.events[key]);
-                  console.log(node.events[key])
+                  domNode.addEventListener(key, newVNode.events[key]);
               })
     }
 
-    if (node.children !== undefined) {
-        node.children.forEach(element => {
+    if (newVNode.children !== undefined) {
+        newVNode.children.forEach(element => {
             domNode.appendChild(renderVDOM(element));
         });
     }
@@ -69,6 +74,9 @@ class Component {
         }
     }
 
+    //TODO: add listening to stuff i.e. how you bind data so that trigger a re-render when it changes
+    //listen({})
+    
     //create acts as the call to createElement
     create(data) {
         //eventually will need to do manipulation to convert template string into this format, but start simple for now
@@ -79,7 +87,7 @@ class Component {
     //acts as the render version of React
     render(data) {
         //not sure what to do with render yet
-        this.node = renderVDOM(this.create(data));
+        this.node = renderVDOM(this.create(data), this.jdom, this.node);
         return this.node;
     }
 }

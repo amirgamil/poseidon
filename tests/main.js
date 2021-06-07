@@ -4,35 +4,72 @@
 class App extends Component {
     init() {
         this.clicked = this.clicked.bind(this);
+        this.hidden = false;
     }
 
 
-    clicked() {
-        console.log("clicked!")
+    clicked(evt) {
+        this.hidden = !this.hidden;
+        console.log(this.hidden)
+        this.render();
     }
 
 
     create() {
-        return {
-            tag: "div",
-            children: [
-                {tag: "h1", 
-                children: ["Hello world!"]}, 
-                {tag: "p1", 
-                 children: ["This is a web framework from scratch"],
-                 attributes: 
-                    {style:
-                       "font-style: italic; font-size: 20px"
-                    }
-                },
-                {tag: "button",
-                children: ["Click me!"],
-                events: {"onclick": this.clicked}}],
-            attributes: 
-                {style:
-                    "background-color: green"
-                }
+        if (this.hidden) {
+            return {
+                tag: "div",
+                children: [
+                    {tag: "h1", 
+                    children: [
+                        {
+                            tag: "TEXT_ELEMENT",
+                            nodeValue: "Hello world"
+                        }
+                    ]},
+                    {tag: "button",
+                    children: [
+                        {
+                            tag: "TEXT_ELEMENT",
+                            nodeValue: "Hello world"
+                        }  
+                    ],
+                    events: {"click": this.clicked}}], 
+            }
+        } else {
+            return {
+                tag: "div",
+                children: [
+                    {tag: "h1", 
+                    children: [
+                        {
+                            tag: "TEXT_ELEMENT",
+                            nodeValue: "Hello world"
+                        }
+                    ]}, 
+                    {tag: "p1", 
+                     children: [
+                        {
+                            tag: "TEXT_ELEMENT",
+                            nodeValue: "This is a web framework from scratch"
+                        }
+                    ],
+                     attributes: 
+                        {style:
+                           "font-style: italic; font-size: 20px"
+                        }
+                    },
+                    {tag: "button",
+                    children: [
+                        {
+                            tag: "TEXT_ELEMENT",
+                            nodeValue: "Hello world"
+                        }  
+                    ],
+                    events: {"click": this.clicked}}], 
+            }
         }
+        
     }
 }
 
