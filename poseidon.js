@@ -6,42 +6,88 @@
 */
 
 
-function updateAttributes(vNode, node) {
-    if (vNode.attributes !== undefined) {
-        Object.keys(vNode.attributes)
+function updateAttributes(nextV, oldV, node) {
+    //remove attributes
+    if (oldV && oldV.attributes) {
+        Object.keys(oldV.attributes)
+            .forEach((key, _) => {
+                node.removeAttribute(key);
+            })
+    }
+    //add attributes
+    if (nextV.attributes !== undefined) {
+        Object.keys(nextV.attributes)
           .forEach((key, _) => {
-            node[key] = vNode.attributes[key];
+            node[key] = nextV.attributes[key];
         })
     }
     return node;
 }
 
+//prints vDOM tree to compare with DOM
+//tabs is used as helper to print the DOM in a readable format
+const printDOMTree = (node, tabs = "") => {
+   if (node.children === undefined) {
+       return tabs + node[0].tag
+   } else {
+       prettyPrint = ""
+       node.children.forEach(node => {
+           prettyPrint += tabs + node.tag + "\n" + printDOMTree(node.children, tabs + "\t") + "\n";
+       })
+       return prettyPrint;
+    }
+}
 
-//simple diffing works
+const isEvent = key => key.startsWith("on");
+//simple diffing works, 
+//newVNode is new vDOM node to be rendered, prevVNode is old, prevDOM is previous node in the DOM
 const renderVDOM = (newVNode, prevVNode, prevDOM) => {
     const sameType = prevVNode && newVNode && newVNode.tag === prevVNode.tag;
     var domNode;
     if (sameType) {
-        domNode = updateAttributes(newVNode, prevVNode);
+        domNode = updateAttributes(newVNode, prevVNode, prevDOM);
     } else {
         domNode = newVNode.tag !== "TEXT_ELEMENT" ? document.createElement(newVNode.tag) : document.createTextNode(newVNode.nodeValue);
         if (prevDOM) {
             //remove child node and replace with newly created one
+            //console.log(prevDOM);
             prevDOM.replaceWith(domNode);
         }
-        domNode = updateAttributes(newVNode, domNode);
+        domNode = updateAttributes(newVNode, prevVNode,domNode);
     }
     if (newVNode.events !== undefined) {
+        if (prevDOM) {
+            //remove old event listeners 
+            Object.keys(prevDOM)
+                .filter(isEvent)
+                .forEach(key => {
+                    domNode.removeEventListener(key, prevDOM[key])
+                });
+        }
+        //add new event listeners
         Object.keys(newVNode.events)
               .forEach(key => {
                   domNode.addEventListener(key, newVNode.events[key]);
-              })
+              });
     }
-
+    
+    //render children
     if (newVNode.children !== undefined) {
-        newVNode.children.forEach(element => {
-            domNode.appendChild(renderVDOM(element));
+        hasChildren = prevVNode && prevVNode.children;
+        newVNode.children.forEach((newChild, i) => {
+            if (hasChildren && i < prevVNode.children.length) {
+                domNode.appendChild(renderVDOM(newChild, prevVNode.children[i], prevDOM.childNodes[i]));
+            } else {
+                domNode.appendChild(renderVDOM(newChild, null, null));
+            }
         });
+        if (hasChildren && newVNode.tag !== "TEXT_ELEMENT") {
+            //remove all extra children from prevVNode
+            for (i = newVNode.children.length - 1; i < prevVNode.children.length; i++) {
+                console.log(prevVNode.children[i]);
+                prevDOM.removeChild(prevDOM.children[i]);
+            }
+        }
     }
     return domNode;
 }
@@ -87,7 +133,10 @@ class Component {
     //acts as the render version of React
     render(data) {
         //not sure what to do with render yet
-        this.node = renderVDOM(this.create(data), this.jdom, this.node);
+        const newVdom = this.create(data); 
+        console.log(printDOMTree(newVdom));
+        this.node = renderVDOM(newVdom, this.jdom, this.node);
+        this.jdom = newVdom;
         return this.node;
     }
 }

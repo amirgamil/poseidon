@@ -10,7 +10,6 @@ class App extends Component {
 
     clicked(evt) {
         this.hidden = !this.hidden;
-        console.log(this.hidden)
         this.render();
     }
 
@@ -26,7 +25,9 @@ class App extends Component {
                             tag: "TEXT_ELEMENT",
                             nodeValue: "Hello world"
                         }
-                    ]},
+                    ],
+                    attributes: {style: "color: green"}    
+                    },
                     {tag: "button",
                     children: [
                         {
@@ -46,7 +47,8 @@ class App extends Component {
                             tag: "TEXT_ELEMENT",
                             nodeValue: "Hello world"
                         }
-                    ]}, 
+                    ],
+                    attributes: {style: "color: blue"}}, 
                     {tag: "p1", 
                      children: [
                         {
