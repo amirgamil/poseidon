@@ -19,6 +19,17 @@ class App extends Component {
             return {
                 tag: "div",
                 children: [
+                    {tag : "div",
+                     children: [
+                        {tag: "p",
+                         children: 
+                            [
+                                { tag: "TEXT_ELEMENT",
+                                nodeValue: "look up"}
+                            ]
+                        }
+                     ]
+                    },
                     {tag: "h1", 
                     children: [
                         {
@@ -26,13 +37,13 @@ class App extends Component {
                             nodeValue: "Hello world"
                         }
                     ],
-                    attributes: {style: "color: green"}    
+                    attributes: {style: "color: green; "}    
                     },
                     {tag: "button",
                     children: [
                         {
                             tag: "TEXT_ELEMENT",
-                            nodeValue: "Hello world"
+                            nodeValue: "Click again!"
                         }  
                     ],
                     events: {"click": this.clicked}}], 
@@ -53,7 +64,7 @@ class App extends Component {
                      children: [
                         {
                             tag: "TEXT_ELEMENT",
-                            nodeValue: "This is a web framework from scratch"
+                            nodeValue: "This is a web framework from scratch\n"
                         }
                     ],
                      attributes: 
@@ -65,7 +76,7 @@ class App extends Component {
                     children: [
                         {
                             tag: "TEXT_ELEMENT",
-                            nodeValue: "Hello world"
+                            nodeValue: "Click to re-render!"
                         }  
                     ],
                     events: {"click": this.clicked}}], 
