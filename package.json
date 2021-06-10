@@ -1,0 +1,26 @@
+{
+  "name": "poseidon",
+  "version": "1.0.0",
+  "description": "No-dependency, component-based JS framework for rendering UI",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "ava"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amirgamil/poseidon.git"
+  },
+  "author": "Amir Bolous",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/amirgamil/poseidon/issues"
+  },
+  "homepage": "https://github.com/amirgamil/poseidon#readme",
+  "devDependencies": {
+    "ava": "^3.15.0",
+    "browser-env": "^3.3.0"
+  }
+}

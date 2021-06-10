@@ -1,2 +1,4 @@
 **/.DS_Store
 progress/
+node_modules/
+package-lock.json

@@ -1,4 +1,7 @@
-//to test stuff as I built it
+const browserEnv = require("browser-env");
+const {
+    Component
+} = require("../src/poseidon.js");
 
 
 class App extends Component {
@@ -87,7 +90,28 @@ class App extends Component {
 }
 
 
+const test = require('ava');
+// Create document global var
+browserEnv(["document"]);
 
-const app = new App();
-document.body.appendChild(app.node);
+test.beforeEach(t => {
+    let root = document.getElementById("root");
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "root";
+      document.body.appendChild(root);
+    }
+    t.context.root = root;
+});
 
+test('displayButton', t => {
+    const root = t.context.root;
+    const app = new App();
+    root.appendChild(app.node); 
+    //initial load
+    t.is(root.innerHTML, `<div><h1 style="color: blue;">Hello world</h1><p1 style="font-style: italic; font-size: 20px;">This is a web framework from scratch
+</p1><button>Click to re-render!</button></div>`);
+    app.clicked() 
+    //button click
+    t.is(root.innerHTML, `<div><div><p>look up</p></div><h1 style="color: green;">Hello world</h1><button>Click to re-render!</button></div>`);
+})
