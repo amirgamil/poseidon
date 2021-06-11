@@ -19,17 +19,6 @@ class App extends Component {
             return {
                 tag: "div",
                 children: [
-                    {tag : "div",
-                     children: [
-                        {tag: "p",
-                         children: 
-                            [
-                                { tag: "TEXT_ELEMENT",
-                                nodeValue: "look up"}
-                            ]
-                        }
-                     ]
-                    },
                     {tag: "h1", 
                     children: [
                         {
@@ -39,6 +28,7 @@ class App extends Component {
                     ],
                     attributes: {style: "color: green; "}    
                     },
+                    {tag: "input"},
                     {tag: "button",
                     children: [
                         {

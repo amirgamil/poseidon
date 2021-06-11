@@ -14,7 +14,7 @@ function updateAttributes(nextV, node) {
              node[key] = nextV.attributes[key];
          })
      }
- }
+}
  
  //prints vDOM tree to compare with DOM
  //tabs is used as helper to print the DOM in a readable format
@@ -85,19 +85,55 @@ function updateAttributes(nextV, node) {
 
 
 //Tags
-const PLACEMENT = 1;
-const DELETION = 2;
-const UPDATE = 3;
+const APPEND = 1;
+const DELETE = 2;
+const REPLACE= 3;
 
-function performUnitOfWork(unitOfWork) {
-    //do stuff
+// function performUnitOfWork(unitOfWork) {
+//     //do stuff
 
-    return nextUnitOfWork;
-}
+//     return unit ;
+// }
 
-function workLoop(nextUnitOfWork) {
-    while (nextUnitOfWork) {
-        nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+// function workLoop(nextUnitOfWork) {
+//     while (nextUnitOfWork) {
+//         nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+//     }
+// }
+
+//queue to manage all updates to the DOM
+//List of {op: <OP> }
+const updateQueue = [];
+
+//used to update DOM operations from the queue
+const performWork = () => {
+    while (updateQueue.length > 0) {
+        //removes and returns item at index 0
+        //TODO: is there a more optimized way of doing this
+        const item = updateQueue.shift();
+        switch (item.op) {
+            case APPEND:
+                parent = item.details.parent;
+                child = item.details.node;
+                updateDOMProperties(child, null, item.details.node);
+                if (parent) {
+                    parent.appendChild(child);
+                }
+                break;
+            case REPLACE:
+                dom = item.details.dom
+                prev = item.details.previous;
+                next = instantiate(item.details.node);
+                //update properties
+                updateDOMProperties(dom, prev, next);
+                dom.replaceWith(next);
+                break;
+            case DELETE:
+                parent = item.details.parent;
+                toRemove = item.details.node;
+                parent.removeChild(toRemove);
+                break;
+        }
     }
 }
 
@@ -108,8 +144,8 @@ function workLoop(nextUnitOfWork) {
  //nodeDOM: is the corresponding node in the DOM
  const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
      const sameType = prevVNode && newVNode && newVNode.tag === prevVNode.tag;
-     var domNode;
      //same node, only update properties
+     var node = null;
      if (sameType) {
          updateDOMProperties(nodeDOM, prevVNode, newVNode)
  
@@ -124,28 +160,31 @@ function workLoop(nextUnitOfWork) {
                  child = renderVDOM(newChild, prev, domChild);
                  //onlly append node if it's new
                  if (child && !prev) {
-                     nodeDOM.appendChild(child);
+                    updateQueue.push({op: APPEND, details: {parent: nodeDOM, node: child}});  
                  }
              }
          }
-         return nodeDOM;
+         node = nodeDOM;
      } else if (!newVNode) {
          //node is no longer present so remove previous present virtual node
-         nodeDOM.parentNode.removeChild(nodeDOM); 
-         return null
+        //  nodeDOM.parentNode.removeChild(nodeDOM); 
+         updateQueue.push({op: DELETE, details: {parent: nodeDOM.parentNode, node: nodeDOM}});
      } else if (!prevVNode) {
-         //create new node
-         domNode = instantiate(newVNode);
-         //update properties
-         updateDOMProperties(domNode, null, newVNode);
-         return domNode;
+        //  create new node
+         node = instantiate(newVNode);
+         if (nodeDOM) {
+            //return child, parent will handle the add to the queue
+            return node;
+         }
+        updateQueue.push({op: APPEND, details: {parent: null, node: node}}); 
      } else {
          //node has changed, so replace
-         newDomNode = instantiate(newVNode);
-         nodeDOM.replaceWith(newDomNode);
-         updateDOMProperties(newDomNode, prevVNode, newVNode);
-         return null;
+         updateQueue.push({op: REPLACE, details: {dom: nodeDOM, previous: prevVNode, node: newVNode}});
      }
+
+     //Done diffing so we can now render the updates
+     performWork();
+     return node;
  }
  
  
@@ -160,7 +199,7 @@ function workLoop(nextUnitOfWork) {
      events: {},
      //map of attributes to values (e.g. {class: "...", id: "../"})
      attributes: {}
- }
+ };
  
  
  //unit of UI
@@ -191,6 +230,7 @@ function workLoop(nextUnitOfWork) {
          //not sure what to do with render yet
          const newVdom = this.create(data); 
          this.node = renderVDOM(newVdom, this.jdom, this.node);
+         console.log("final ", this.node);
          this.jdom = newVdom;
          return this.node;
      }
@@ -207,9 +247,6 @@ function workLoop(nextUnitOfWork) {
  class List {
  
  }
- 
- 
- 
  
 module.exports = {
     Component
