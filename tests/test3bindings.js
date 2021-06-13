@@ -1,5 +1,3 @@
-//TODO: add nested components as a test
-
 class FormData extends Atom {
 
 }
@@ -9,15 +7,16 @@ class Form extends Component {
         this.handleFirstInput = evt => this.handleInput("first", evt);
         this.handleLastInput = evt => this.handleInput("last", evt);
         this.handleInput = this.handleInput.bind(this);
-        this.data = new FormData({first: "Hello", last: ""});
-        this.bind(this.data);
+        this.form = new FormData({first: "", last: ""});
+        this.render = this.render.bind(this);
+        this.bind(this.form, (data) => this.render(data));
     }
 
     handleInput(key, evt) {
-        this.data.update({[key]: evt.target.value});
+        this.form.update({[key]: evt.target.value});
     }
 
-    create({first, last}) {
+    create() {
          return {tag: "div",
                  children: [
                     {tag: "p",
@@ -26,13 +25,13 @@ class Form extends Component {
                         nodeValue: "First name"}
                     ]},
                    {tag: "input", 
-                    attributes: {value: first},
+                    attributes: {value: this.form.state.first},
                     events: {"input": this.handleFirstInput}
                    },
                    {tag: "p",
                     children: [
                        {tag: "TEXT_ELEMENT",
-                        nodeValue: first}
+                        nodeValue: this.form.state.first}
                     ]},
                    {tag: "p",
                     children: [
@@ -42,7 +41,7 @@ class Form extends Component {
                     ]
                    },
                    {tag: "input",
-                    attributes: {value: last, style: "margin-bottom: 10px"},
+                    attributes: {value: this.form.state.last, style: "margin-bottom: 10px"},
                     events: {"input": this.handleLastInput}}
                  ]}
     }
