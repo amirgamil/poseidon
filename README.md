@@ -1,20 +1,45 @@
 # Poseidon  🔱
-## Intro
+### Intro
 Poseidon is, to use a nice description by Reef, an anti-framework. It's a a no-dependency, component-based Javascript framework for rendering UI on the web. It aims at being lightweight, fast, and intuitive (i.e. easy to use) for building static and dynamic apps without compromising on .....
 
-To allow for a declarative, event-driven framework through which we interact with the UI, Poseidon distinguishes between UI that gets rendered and data that powers the UI. Whenever changes are made to the data, an event is fired or emitted to update the UI, and whenever an update is made to the UI to change data, an event is fired to update the store in the database. We do this by binding data to event handelers. This allows us to encapsulate logic needed to update data when changes are made so that making changes to the UI is simple.
+To allow for a declarative, event-driven framework through which we interact with the UI, Poseidon distinguishes between UI that gets rendered and data that powers the UI. This takes a similar flavor to the model-view approach adopted by Backbone and more generally, the model-view-controller pattern. This allows us to encapsulate logic needed to update data when changes are made, so that we can decompose the changing data from the reusable DOM elements of the UI that should reflect those changes. 
+
+Concretely, this means that Poseidon provides a layer that interfaces with the UI in the forms of CollectionStores. This 
 
 In this way, Poseidon makes it very easy to both distinguish, maintain, and interface the data that powers applications with the UI that gets rendered accordingly. 
 
-Takes from Backbone's and Torus's model-view flavor
+Takes from Backbone's model-view flavor and Torus's approach with evented data stores.
+
+### Focuses
+- Declarative UI framework
+- Data systems and connecting to data models (e.g. in Backbone, Polymer, Torus)
+- Events
+
+### Patterns
+Things to keep in mind and take advantage of when building applications. Collection of patterns that will crop up frequently - can use to build very powerful apps.
+1. Using stores as the middle man between databases and rendering to the UI
+2. Binding data when initializing a component to trigger a re-render when it changes (similar to useState or hooks in React)
+3. Taking advantage of lists composed from custom data structures using an atom
+    - Allows you to define the UI (i.e. the DOM element) for a single item once, and render it for a list of items
+4. Connecting lists with data sources to load their content from databases
+5. Self-managing components - state stored and acted on locally. Allows you to easily compose different components without 
+central stores or state becoming too clunky and unmanageable (some common complaints with Redux for example)
+
+### Ideas to extend
+1. Make it more intuitive to connect data to stores to UI 
+    - Pass in JSON data and automatically map to atom list and store
+2. Higher order stores? 
+3. Data structure to concretely connect stores with lists? Model? Optional or enforced (i.e. expose Store and List like in Torus and give added functionality of Model or no?)
+4. Better support for interacting w. external sources like MongoDB, Airtable, etc. 
+5. Define more complex events with Listening - give tools to create more events which can be listened to (kind of like in Backbone)
+6. Key-based reconciliation?
+
 
 ### Goals
 - Connecting to data sources should be easy, focus on the UI rendering bit
 - More low, level, interface with the DOM
-- Markup language via template literals, don't want to use JSX since this would require a build stage (i.e. to compile the JSX Javascript) and we don't want to deal with dependencies or configs
+- Markup language via template literals - runtime version of jsx (written in Javascript) similar to Torus, don't want to use JSX since this would require a build stage (i.e. to compile the JSX to Javascript) and we don't want to deal with dependencies or configs
     a. Should be able to drop this as a script tag and start developing instantly 
-- 
-
 
 ### Notes
 1. Define unit of UI component via component class
@@ -22,4 +47,8 @@ Takes from Backbone's and Torus's model-view flavor
 3. UI design should be declarative
 4. Bind data or things that change within that component, keep virtual DOM to monitor changes 
     a. Diffing algorithm to figure out what's changed and render it accordingly
+
+
+### Things that need to be looked into
+1. Component life-cycle updates
 

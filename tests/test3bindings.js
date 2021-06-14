@@ -8,8 +8,7 @@ class Form extends Component {
         this.handleLastInput = evt => this.handleInput("last", evt);
         this.handleInput = this.handleInput.bind(this);
         this.form = new FormData({first: "", last: ""});
-        this.render = this.render.bind(this);
-        this.bind(this.form, (data) => this.render(data));
+        this.bind(this.form);
     }
 
     handleInput(key, evt) {
@@ -88,4 +87,7 @@ class App extends Component {
 
 
 const app = new App();
-document.body.appendChild(app.node);
+document.body.appendChild(app.node)
+
+//TODO: add tests to enforce above is working
+//TODO: test binding stores and ensure UI re-renders

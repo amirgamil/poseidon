@@ -1,21 +1,3 @@
-/*TODO: 
-1. Add support for event listeners
-2. 
-*/
-
-//remove attributes
-
-
-
-function updateAttributes(nextV, node) {
-    if (nextV.attributes !== undefined) {
-        Object.keys(nextV.attributes)
-        .forEach((key, _) => {
-            node[key] = nextV.attributes[key];
-        })
-    }
-}
- 
 //prints vDOM tree to compare with DOM
 //tabs is used as helper to print the DOM in a readable format
 const printDOMTree = (node, tabs = "") => {
@@ -222,7 +204,9 @@ class Component {
         //initialize stuff
         //vdom from create
         this.vdom = null;
-        this.init(...args)
+        if (this.init !== undefined) {
+            this.init(...args);
+        }
         //actual DOM node
         //this.data is a reserved property for passing into create to reduce side-effects and allow components to create UI without
         //having to rely on getting the data from elsewhere (can define in it in init of a user-defined component)
@@ -243,11 +227,12 @@ class Component {
         }
     }
 
-    remove(source, handler) {
-        source.removeHandler(handler);
+    remove() {
+        //take down any things necessary from the DOM
     }
 
     //create allows us to compose our unit of component
+    //should be deterministic and have no side-effects (i.e. should be rendered declaratively)
     create(data) {
         //eventually will need to do manipulation to convert template string into this format, but start simple for now
         return null;
@@ -272,7 +257,8 @@ class Listening {
     //represent the current state of the data
     //used to determine when a change has happened and execute the corresponding handler
     state; 
-
+    //return summary of state
+    summarize;
     //used to listen to and execute handlers on listening to events
     fire() {
         this.handlers.forEach(handler => {
@@ -298,9 +284,26 @@ class Atom extends Listening {
         super();
         super.state = object;
     }
+
+    summarize() {
+        return this.state;
+    }
+
+    //default comparator should be overrided for custom functionality in atom class
+    get comparator() {
+        return null;
+    }
+
+    //all children of atoms should include a method that returns their type (base implementation provided for general Atom)
+    //but should be specific to implementing atom class
+    get type() {
+        return Atom;
+    }
+    
+
     //called to update the state of an atom of data
     //takes in an object of keys to values
-    update(object) {
+    set update(object) {
         for (const prop in object){
             this.state[prop] = object[prop];
         }
@@ -308,6 +311,12 @@ class Atom extends Listening {
         this.fire();
 
     }
+
+    //used to return a property defined in an atom
+    get(key) {
+        return this.state[key];
+    }
+
     //convert data to JSON (potentially for persistent store, etc.)
     serialize() {
         return JSON.stringify(this.state); 
@@ -315,42 +324,117 @@ class Atom extends Listening {
  
 }
  
- 
-class List extends Listening {
-    constructor(store, remove) {
-        this.nodes = null;
-        //specify type of list item we can find
-        //TODO: add special support for different types of elements loaded in a list? How do we do this? Wrap in component with
-        //one data field?
-        this.type = null;
+//Lists are backed by collection data stores (middle man between database and the UI) to map collections to the UI
+class List extends Component {
+    //fix constructor with args
+    constructor(store, remove, item) {
+        //call super method, TODO: fix the args
+        super();
+        this._store = store;
+        //atomic class backing the store 
+        this._atomClass = store.atomClass;
+        //remove handles how to update/remove elements from store
         this.remove = remove;
+        //item is the unit of component that will render each individual element of a list 
+        this.item = item;
+        //loop through the store, map data in every row to a new ItemClass - how does this work with ListOf?
+        this.nodes = store.data.map(atom => new this.item(atom));
     }
+    
+    get type() {
+        return this._atomClass;
+    }
+
+    summarize() {
+        return
+    }
+
 }
 
-//middle man between database and the UI
-class Store extends Listening {
-    constructor(type) {
-        this.data = {};
-        this.type = type;
+function ListOf(classOf, store, remove) {
+    return new List(store, remove, classOf);
+}
+
+//middle man between database and the UI. Used to store collections and interface with the UI
+//similar to Store in Torus and Collections in Backbone
+class CollectionStore extends Listening {
+    constructor(data, atomClass) {
+        //TODO: fix super call
+        super();
+        this._atomClass = atomClass;
+        this.setStore(data);
     }
 
-    reset(data) {
-        this.data = data;
+    //will typically have a fetch and save method to cache data locally from the database to load the UI and save upon rewrites
+    //setStore provides a flexible way to intialize a store with data (either via the constructor or e.g. an internal fetch method)
+    setStore(data) {
+        if (data !== undefined && data !== null) {
+            //assume all data is the same type if no atom class is provided (meaning we can infer it directly, since just list of atoms) 
+            if (this._atomClass === undefined) {
+                this.data = new Set(data);
+                if (this.data.size > 0) {
+                    //TODO: is there a better way of doing this?
+                    this._atomClass = data[0].type;
+                }
+            } else {
+                this.data = new Set(data.map(el => new this._atomClass(el)));
+            }       
+        } else {
+            this.data = new Set();
+        } 
     }
 
-    seralize() {
+    summarize() {
+        return JSON.stringify(this.data);
+    }
 
+    add(newData) {
+        this.data.add(newData);
+    }
+
+    remove(oldData) {
+        this.data.delete(oldData);
+    }
+
+    //return JSON serialized data sorted by comparator
+    serialize() {
+        //creates array with spread syntax, then sorts
+        //TODO: is there a more efficient way of doing this
+        const sorted = [...this.data];
+        sorted.sort((a , b) => {
+            return a.comparator - b.comparator;
+        });
+        return JSON.stringify(sorted);
+    }
+
+    get atomClass() {
+        return this._atomClass;
+    }
+
+    //define customer iterator interface so we can loop over stores directly
+    //take advantage of the iterator values() returns since data is a Javascript set 
+    [Symbol.iterator]() {
+        return this.data.values();
     }
 }
 
 //Factory method pattern as used in Torus 
-class StoreOf extends Listening {
-    constructor(classOf) {
-        return Store(classOf);
-    }
+function CollectionStoreOf(classOf, data) {
+    return new CollectionStore(data, classOf);
+};
+
+
+class Router {
+    //match-based router (i.e. builds a routing table)
+    //connects patterns to callable objects (components or DOM elements to be rendered)
 }
 
-
 module.exports = {
-    Component
+    Component,
+    List,
+    Atom,
+    ListOf,
+    CollectionStore,
+    CollectionStoreOf,
+    Router
 }
