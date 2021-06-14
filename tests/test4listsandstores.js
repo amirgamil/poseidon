@@ -64,7 +64,7 @@ test('sorting', t => {
     const date4 = new Birthday({year: 2001});
     const date5 = new Birthday({year: 2021});
     const dateStore = new CollectionStore([date1, date2, date3, date4, date5]);
-    t.deepEqual(dateStore.seralize(), JSON.stringify([date2, date1, date4, date3, date5]));
+    t.deepEqual(dateStore.serialize(), JSON.stringify([date2, date1, date4, date3, date5]));
 })
 
 
@@ -72,10 +72,12 @@ test('sorting', t => {
 test('addremove', t => {
     const date1 = new Birthday(1995);
     const date2 = new Birthday(1963);
-    const dataStore = new CollectionStoreOf(Birthday);
-    dataStore.add(date1);
-    dataStore.add(date2);
+    const dataStore = new CollectionStore();
     const firstTruth = new CollectionStore([date1, date2]);
+    dataStore.add(date1);
+    //check that Poseidon inferred correct type
+    t.is(dataStore.atomClass, Birthday);
+    dataStore.add(date2);
     t.deepEqual(dataStore, firstTruth);
     dataStore.remove(date1); 
     const secondTruth = new CollectionStore([date2])

@@ -5,10 +5,11 @@ class FormData extends Atom {
 }
 
 class FormItem extends Component {
-    init() {
-        //do stuff
+    init(data){
+        console.log(data);
+        this.data = data;
     }
-    create() {
+    create({first}) {
         return {tag: "div",
         children: [
            {tag: "p",
@@ -17,7 +18,7 @@ class FormItem extends Component {
                nodeValue: "First name"}
            ]},
           {tag: "input", 
-           attributes: {value: "hello"},
+           attributes: {value: first},
            events: {"input": this.handleFirstInput}
           },
           {tag: "p",
@@ -29,9 +30,8 @@ class FormItem extends Component {
 class FormList extends ListOf(FormItem) {
     create() {
         return {tag: "div",
-                children : [
-                    this.nodes
-                ]};
+                children : this.nodes} 
+                   
     }
 }
 
@@ -55,7 +55,8 @@ class Form extends Component {
                     children: [
                        {tag: "TEXT_ELEMENT",
                         nodeValue: "Store"}
-                    ]}
+                    ]},
+                    this.list.node
                  ]}
     }
 

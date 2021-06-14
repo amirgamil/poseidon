@@ -208,7 +208,7 @@ class Component {
             this.init(...args);
         }
         //actual DOM node
-        //this.data is a reserved property for passing into create to reduce side-effects and allow components to create UI without
+        //`this.data` is a reserved property for passing into create to reduce side-effects and allow components to create UI without
         //having to rely on getting the data from elsewhere (can define in it in init of a user-defined component)
         if (this.node === undefined) {
             this.render(this.data);
@@ -326,23 +326,34 @@ class Atom extends Listening {
  
 //Lists are backed by collection data stores (middle man between database and the UI) to map collections to the UI
 class List extends Component {
-    //fix constructor with args
-    constructor(store, remove, item) {
-        //call super method, TODO: fix the args
-        super();
-        this._store = store;
-        //atomic class backing the store 
-        this._atomClass = store.atomClass;
-        //remove handles how to update/remove elements from store
+    init(item, store, remove) {
+        this.store = store;
         this.remove = remove;
-        //item is the unit of component that will render each individual element of a list 
-        this.item = item;
-        //loop through the store, map data in every row to a new ItemClass - how does this work with ListOf?
-        this.nodes = store.data.map(atom => new this.item(atom));
+        //domElement is the unit of component that will render each individual element of a list 
+        this.domElement = item;
+        const array = [...store.data];
+        console.log(store.data);
+        this.nodes = array.map(element => {
+            console.log(element.state.state);
+            const component = new this.domElement(element.state);
+            return component.node;
+        });
+        console.log(this.nodes);
+    }
+
+    //fix constructor with args
+    constructor(item, store, remove) {
+        //call super method
+        super(item, store, remove);
+        this._atomClass = store.atomClass;
     }
     
     get type() {
         return this._atomClass;
+    }
+
+    create(data) {
+        return null;
     }
 
     summarize() {
@@ -351,8 +362,13 @@ class List extends Component {
 
 }
 
-function ListOf(classOf, store, remove) {
-    return new List(store, remove, classOf);
+function ListOf(itemOf) {
+    return class extends List {
+        constructor(...args) {
+            console.log(args);
+            super(itemOf,...args);
+        }
+    }; 
 }
 
 //middle man between database and the UI. Used to store collections and interface with the UI
@@ -362,22 +378,29 @@ class CollectionStore extends Listening {
         //TODO: fix super call
         super();
         this._atomClass = atomClass;
-        this.setStore(data);
+        this.setStore(data); 
     }
 
     //will typically have a fetch and save method to cache data locally from the database to load the UI and save upon rewrites
     //setStore provides a flexible way to intialize a store with data (either via the constructor or e.g. an internal fetch method)
     setStore(data) {
-        if (data !== undefined && data !== null) {
+        //4 possible configurations for initalizing a store with data
+        //1. Pass in objects with Atom
+        //2. Pass in intialized atoms as an array with no type (inferred)
+        //3. 1 but via CollectionStoreOf
+        //4. 2 but via CollectionStoreOf
+        if (data !== undefined && data !== null && data.length > 0) {
             //assume all data is the same type if no atom class is provided (meaning we can infer it directly, since just list of atoms) 
             if (this._atomClass === undefined) {
                 this.data = new Set(data);
-                if (this.data.size > 0) {
-                    //TODO: is there a better way of doing this?
-                    this._atomClass = data[0].type;
-                }
+                //TODO: is there a better way of doing this?
+                this._atomClass = data[0].type;
             } else {
-                this.data = new Set(data.map(el => new this._atomClass(el)));
+                if (data[0] instanceof Atom) {
+                    this.data = new Set(data);
+                } else {
+                    this.data = new Set(data.map(el => new this._atomClass(el)));
+                }
             }       
         } else {
             this.data = new Set();
@@ -390,6 +413,9 @@ class CollectionStore extends Listening {
 
     add(newData) {
         this.data.add(newData);
+        if (this._atomClass === undefined) {
+            this._atomClass = newData.type;
+        }
     }
 
     remove(oldData) {
@@ -418,10 +444,14 @@ class CollectionStore extends Listening {
     }
 }
 
-//Factory method pattern as used in Torus 
-function CollectionStoreOf(classOf, data) {
-    return new CollectionStore(data, classOf);
-};
+//Higher order component pattern like in Torus
+function CollectionStoreOf(classOf) {
+    return class extends CollectionStore {
+        constructor(data) {
+            super(data, classOf);
+        }
+    };
+}
 
 
 class Router {
