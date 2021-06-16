@@ -24,6 +24,12 @@ Things to keep in mind and take advantage of when building applications. Collect
 4. Connecting lists with data sources to load their content from databases
 5. Self-managing components - state stored and acted on locally. Allows you to easily compose different components without 
 central stores or state becoming too clunky and unmanageable (some common complaints with Redux for example)
+    - This means when loading lists, each component element of the list has access to its atomic data and a callback to remove the data from the store
+    - That way, the component is self-managing since data can be added or removed from itself
+6. Setting up data you want to access when rendering the UI by setting `this.data = ...` in the `init` of a component
+7. Pure components and container components 
+    - Container: interact directly with the store, have side-effects (e.g. List component)
+    - Pure: mostly pure components, given same state will render the same UI
 
 ### Ideas to extend
 1. Make it more intuitive to connect data to stores to UI 
@@ -33,6 +39,7 @@ central stores or state becoming too clunky and unmanageable (some common compla
 4. Better support for interacting w. external sources like MongoDB, Airtable, etc. 
 5. Define more complex events with Listening - give tools to create more events which can be listened to (kind of like in Backbone)
 6. Key-based reconciliation?
+7. Did not like Torus's router, is there a more intuitivte way of doing it?
 
 
 ### Goals

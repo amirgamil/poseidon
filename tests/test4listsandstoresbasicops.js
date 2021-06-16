@@ -85,3 +85,80 @@ test('addremove', t => {
 })
 
 
+
+//Lists
+class FormData extends Atom {
+    get type() {
+        return FormData;
+    }
+}
+
+class FormItem extends Component {
+    init(data){
+        this.data = data;
+        this.handleFirstInput = this.handleFirstInput.bind(this);
+        this.bind(this.data);
+    }
+
+    handleFirstInput(evt) {
+        this.data.update({first:evt.target.value});
+    }
+
+    create({first}){
+        return {tag: "div",
+        children: [
+          {tag: "p",
+           children: [
+               {tag: "TEXT_ELEMENT",
+                nodeValue: first}
+           ]}
+        ]}; 
+    }
+}
+
+class FormList extends ListOf(FormItem) {
+    create() {
+        return {tag: "div",
+                children : this.nodes} 
+                   
+    }
+}
+
+class FormDataStore extends CollectionStoreOf(FormData) {
+
+}
+
+class Form extends Component {
+    init() {
+        const test1 = new FormData({first: "hello"});
+        const test2 = new FormData({first: "hi"});
+        const test3 = new FormData({first: "what's up"})
+        this.store = new FormDataStore([test1, test2, test3]);
+        this.list = new FormList(this.store, data => this.store.remove(data));
+        // this.bind(this.data);
+    }
+
+    create() {
+         return {tag: "div",
+                 children: [
+                    {tag: "h2",
+                    children: [
+                       {tag: "TEXT_ELEMENT",
+                        nodeValue: "Store"}
+                    ],
+                    attributes: {style: "color:green;"}},
+                    this.list.node
+                 ]}
+    }
+
+}
+
+test('displayList', t => {
+    const app = new Form();
+    document.body.appendChild(app.node); 
+    //initial load
+    t.is(document.body.innerHTML, `<div><h2 style="color: green;">Store</h2><div><div><p>hello</p></div><div><p>hi</p></div><div><p>what's up</p></div></div></div>`);
+});
+
+
+

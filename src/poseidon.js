@@ -51,7 +51,10 @@ const isDOM = node => node.nodeType !== Node.TEXT_NODE;
 //instantiate a virtual DOM node to an actual DOM node
 const instantiate = (vNode) => {
     if (!vNode.tag) {
-        //if no tag, then this is already a rendered DOM node, from potentially nesting so return
+        //if no tag, then this is already a rendered DOM node,
+        if (vNode.node) {
+            return vNode.node
+        } 
         return vNode;
     } else {
         const domNode = vNode.tag !== "TEXT_ELEMENT" ? document.createElement(vNode.tag) : document.createTextNode(vNode.nodeValue);
@@ -145,31 +148,40 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
     var node = normalize(null);
     //same node, only update properties
     if (sameType) {
-        updateQueue.push({op: UPDATE, details: {dom: nodeDOM, prev: prevVNode, new: newVNode}});  
-        //render children
-        if (newVNode.children) {
-            const count = Math.max(newVNode.children.length, prevVNode.children.length);
-            const domChildren = nodeDOM ? nodeDOM.childNodes : [];
-            for (let i = 0; i < count; i++) {
-                newChild = newVNode.children[i];
-                prev = prevVNode.children[i]; 
-                domChild = domChildren[i]; 
-                child = renderVDOM(newChild, prev, domChild);
-                //only append node if it's new
-                if (child && !prev) {
-                    updateQueue.push({op: APPEND, details: {parent: nodeDOM, node: child}});  
+        //means we have an element loaded in a list node
+        if (newVNode.tag === undefined) {
+            updateQueue.push({op: REPLACE, details: {dom: nodeDOM, previous: prevVNode, node: newVNode}});
+            node = newVNode;
+        } else {
+            updateQueue.push({op: UPDATE, details: {dom: nodeDOM, prev: prevVNode, new: newVNode}});  
+            //render children
+            if (newVNode.children) {
+                const count = Math.max(newVNode.children.length, prevVNode.children.length);
+                const domChildren = nodeDOM ? nodeDOM.childNodes : [];
+                for (let i = 0; i < count; i++) {
+                    newChild = newVNode.children[i];
+                    prev = prevVNode.children[i]; 
+                    domChild = domChildren[i]; 
+                    child = renderVDOM(newChild, prev, domChild);
+                    //only append node if it's new
+                    if (child && !prev) {
+                        updateQueue.push({op: APPEND, details: {parent: nodeDOM, node: child}});  
+                    }
                 }
             }
+            node = nodeDOM;
         }
-        node = nodeDOM;
     } else if (newVNode.tag == "") {
         //node is no longer present so remove previous present virtual node
-        updateQueue.push({op: DELETE, details: {parent: nodeDOM.parentNode, node: nodeDOM}});
+        //note if the DOM node is undefined, then that node has already been handled i.e. removed or added in a previous iteration
+        if (nodeDOM) {
+            updateQueue.push({op: DELETE, details: {parent: nodeDOM.parentNode, node: nodeDOM}});
+        }
     } else if (prevVNode.tag == "") {
         //  create new node
         node = instantiate(newVNode);
         if (nodeDOM) {
-        //return child, parent will handle the add to the queue
+            //return child, parent will handle the add to the queue
             return node;
         }
         updateQueue.push({op: APPEND, details: {parent: null, node: node}}); 
@@ -243,8 +255,11 @@ class Component {
     render(data) {
         //not sure what to do with render yet
         const newVdom = this.create(data); 
-        this.node = renderVDOM(newVdom, this.jdom, this.node);
-        this.jdom = newVdom;
+        if (this.node === undefined) {
+            console.log(this);
+        }
+        this.node = renderVDOM(newVdom, this.vdom, this.node);
+        this.vdom= newVdom;
         return this.node;
     }
 }
@@ -263,7 +278,17 @@ class Listening {
     fire() {
         this.handlers.forEach(handler => {
             //call handler with new state
+            //since we pass in the state, this means we have access directly to an atom's data (aka state) in the handler
+            //(including a call to render)
             handler(this.state);
+        })
+    }
+
+    //called when an atom is taken down to remove all subscribed event handlers
+    remove() {
+        this.handlers.forEach(handler => {
+            //remove handler 
+            this.removeHandler(handler)
         })
     }
 
@@ -303,7 +328,7 @@ class Atom extends Listening {
 
     //called to update the state of an atom of data
     //takes in an object of keys to values
-    set update(object) {
+    update(object) {
         for (const prop in object){
             this.state[prop] = object[prop];
         }
@@ -326,28 +351,54 @@ class Atom extends Listening {
  
 //Lists are backed by collection data stores (middle man between database and the UI) to map collections to the UI
 class List extends Component {
-    init(item, store, remove) {
-        this.store = store;
-        this.remove = remove;
-        //domElement is the unit of component that will render each individual element of a list 
-        this.domElement = item;
-        const array = [...store.data];
-        console.log(store.data);
-        this.nodes = array.map(element => {
-            console.log(element.state.state);
-            const component = new this.domElement(element.state);
-            return component.node;
-        });
-        console.log(this.nodes);
-    }
-
     //fix constructor with args
     constructor(item, store, remove) {
         //call super method
         super(item, store, remove);
         this._atomClass = store.atomClass;
     }
-    
+     
+    init(item, store, remove) {
+        this.store = store;
+        this.remove = remove;
+        //domElement is the unit of component that will render each individual element of a list 
+        this.domElement = item;
+        //backed by Javascript Map since maintains order and implements iterable interface, allowing easy manipulation when looping
+        //this items maps atoms as keys to DOM nodes as values. This prevents us having to re-render all DOM list elements, and only
+        //re-render the elements that have changed or the ones that need to be added
+        this.items = new Map();
+        this.nodes = [];
+        //will initialize map on first call of itemsChanged() -> binding calls handler the first time
+        this.bind(store, () => this.itemsChanged());
+    }
+
+    itemsChanged() {
+        //loop over store and add new elements
+        //TODO: does this work correctly if you CHANGE existing elements, EDIT: it doesn't
+        this.store.data.forEach((element) => {
+            if (!this.items.has(element)) {
+                //pass in the atom to the new initialized component as well as the callback to remove an item from a store
+                //so that each component can remove its own atomic data
+                const domNode = new this.domElement(element, this.remove);
+                //note we pass the DOM nodes of the rendered component so that each defined component (i.e. domElement above) has 
+                //a reference to the actual DOM node being displayed on the web page. If we passed in a vDOM node, then 
+                //our rendering logic would instantiate a new DOM node and added it to the page but the component 
+                //(elemnt of a list) would not have a reference to this DOM node locally and would not be able update 
+                //changes (on the web page) reflected to its state (and a goal of Poseidon is that we have self-managing components 
+                //so should be able to display changes to changes in atomic data directly within our own component)
+                this.items.set(element, domNode.node);
+            } 
+        })
+        //loop over map and remove old elements
+        for (let [key, value] of this.items) {
+            if (!this.store.has(key)) {
+                this.items.delete(key);
+            } 
+        }
+        this.nodes = Array.from(this.items.values()); 
+        this.render(this.nodes);
+    }
+
     get type() {
         return this._atomClass;
     }
@@ -365,7 +416,6 @@ class List extends Component {
 function ListOf(itemOf) {
     return class extends List {
         constructor(...args) {
-            console.log(args);
             super(itemOf,...args);
         }
     }; 
@@ -416,10 +466,22 @@ class CollectionStore extends Listening {
         if (this._atomClass === undefined) {
             this._atomClass = newData.type;
         }
+        //trigger any event handlers that are subscribed to the store for an update
+        this.fire();
+    }
+
+    has(value) {
+        return this.data.has(value);
     }
 
     remove(oldData) {
+        //remove atom from the store
         this.data.delete(oldData);
+        //call atom's remove to remove all subscribed event handlers
+        oldData.remove();
+        //trigger any event handlers that are subscribed to the store for an update
+        this.fire();
+
     }
 
     //return JSON serialized data sorted by comparator

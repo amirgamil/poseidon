@@ -113,5 +113,5 @@ test('displayButton', t => {
 </p1><button>Click to re-render!</button></div>`);
     app.clicked() 
     //button click
-    t.is(root.innerHTML, `<div><div><p>look up</p></div><h1 style="color: green;">Hello world</h1><button>Click to re-render!</button></div>`);
+    t.is(root.innerHTML, `<div><div><p>look up</p></div><h1 style="color: green;">Hello world</h1><button>Click again!</button></div>`);
 });

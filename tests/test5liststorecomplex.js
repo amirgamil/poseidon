@@ -1,3 +1,13 @@
+const browserEnv = require("browser-env");
+const {
+    Component,
+    List,
+    Atom,
+    ListOf,
+    CollectionStore, 
+    CollectionStoreOf,
+} = require("../src/poseidon.js");
+
 class FormData extends Atom {
     get type() {
         return FormData;
@@ -139,5 +149,13 @@ class App extends Component {
     }
 }
 
-const app = new App();
-document.body.appendChild(app.node);
+const test = require('ava');
+browserEnv(["document"]);
+
+test('editListAndStore', t => {
+    const app = new App();
+    document.body.appendChild(app.node); 
+    //initial load
+    t.is(document.body.innerHTML, `<div style="color: green;"><h1>Hello world</h1><div><h2>Store</h2><div><div style="margin-bottom: 25px;"><input><p>hello</p><button>Remove!</button></div><div style="margin-bottom: 25px;"><input><p>hi</p><button>Remove!</button></div></div><button>Add a row!</button><button>Print store!</button></div></div>`);
+    //TODO: figure out way to programmatically click stuff and verify
+});
