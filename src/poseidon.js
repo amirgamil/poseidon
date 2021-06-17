@@ -224,7 +224,9 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
             break;
         }
         const selector = arr[1].trim();
-        res[selector] = [];
+        if (!res[selector]) {
+            res[selector] = [];
+        }
         //body inside selector, split by semi-colons
         const bodyNoNewLines = arr[2].replace(/(\r\n|\n|\r)/gm, "");
         const body = bodyNoNewLines.split(";");
@@ -284,19 +286,26 @@ class Component {
         const style = document.createElement('style');
         const userStyles = this.styles();
         if (userStyles) {
+            var text = "";
             Object.keys(userStyles).forEach(selector => {
+                text += selector + " { \n";
                 userStyles[selector].forEach((item, _)=> {
                     const key = Object.keys(item);
                     const val = item[key];
-                    const domNode = document.querySelector(selector);
-                    if (domNode){
-                        console.log(key, val);
-                        domNode.style[key] = val;
-                        console.log(domNode.style[key]);
-                    }
+                    text += key + ":" + val + ";\n";
                 })
+                text += "}\n\n";
             });
-            console.log(userStyles);
+            //create style tag
+            const cssNode = document.createElement('style');
+            cssNode.type = 'text/css';
+            if (css.styleSheet) {
+                cssNode.styleSheet.cssText = text;
+            } else {
+                cssNode.appendChild(document.createTextNode(text));
+            }
+            console.log(cssNode);
+            document.getElementsByTagName('head')[0].appendChild(cssNode);
         }
     }
 

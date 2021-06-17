@@ -73,6 +73,16 @@ class Form extends Component {
         console.log(this.store);
     }
 
+    styles() {
+        return css`
+            div {
+                background-color: blue;
+                margin: 0;
+                padding-bottom: 10px;
+            }
+        `
+    }
+
     create() {
          return {tag: "div",
                  children: [
@@ -107,20 +117,6 @@ class Form extends Component {
 class App extends Component {
     init() {
         this.form = new Form();
-    }
-
-    styles() {
-        return css`
-            body {
-                background-color: yellow;
-            }
-
-            div {
-                background-color: blue;
-                margin: 0;
-                padding-bottom: 10px;
-            }
-        `
     }
     
     debug() {
