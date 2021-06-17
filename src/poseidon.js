@@ -209,6 +209,39 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
      attributes: {}
  };
  
+
+ function css(string) {
+    const componentStyles = string[0].replace("\n", "");
+    res = {}
+    //pass optional g flag to return all matches (not just the first one)
+    //will match < name { rule: value } > 
+    var regex = new RegExp('([\\s\\S]*?){([\\s\\S]*?)}', 'g');
+    var arr;
+    //loop while we're still matching
+    while (true) {
+        arr = regex.exec(componentStyles); 
+        if (!arr) {
+            break;
+        }
+        const selector = arr[1].trim();
+        res[selector] = [];
+        //body inside selector, split by semi-colons
+        const bodyNoNewLines = arr[2].replace(/(\r\n|\n|\r)/gm, "");
+        const body = bodyNoNewLines.split(";");
+        for (let rule of body) {
+            //TODO: make more efficient
+            if (!(rule.trim())) {
+                continue;
+            }
+            const formattedRule = rule.split(":");
+            const styleRule = formattedRule[0].trim();
+            const val = formattedRule[1].trim();
+            res[selector].push({[styleRule] : val}); 
+        }
+    }
+    return res;
+ }
+
  
  //unit of UI
 class Component {
@@ -239,6 +272,35 @@ class Component {
         }
     }
 
+    //method for adding in-line css styling to components via css template literal, should be overrided in relevant component
+    styles() {
+        return null;
+    }
+
+    //helper method for adding component-defined styles 
+    addStyle() {
+        //write own css parser
+        //guide e.g. https://medium.com/@benjamin.d.johnson/create-a-css-parser-using-template-literals-md-3905905a569e
+        const style = document.createElement('style');
+        const userStyles = this.styles();
+        if (userStyles) {
+            Object.keys(userStyles).forEach(selector => {
+                userStyles[selector].forEach((item, _)=> {
+                    const key = Object.keys(item);
+                    const val = item[key];
+                    const domNode = document.querySelector(selector);
+                    if (domNode){
+                        console.log(key, val);
+                        domNode.style[key] = val;
+                        console.log(domNode.style[key]);
+                    }
+                })
+            });
+            console.log(userStyles);
+        }
+    }
+
+
     remove() {
         //take down any things necessary from the DOM
     }
@@ -255,10 +317,8 @@ class Component {
     render(data) {
         //not sure what to do with render yet
         const newVdom = this.create(data); 
-        if (this.node === undefined) {
-            console.log(this);
-        }
         this.node = renderVDOM(newVdom, this.vdom, this.node);
+        this.addStyle();
         this.vdom= newVdom;
         return this.node;
     }
