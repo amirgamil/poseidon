@@ -73,16 +73,6 @@ class Form extends Component {
         console.log(this.store);
     }
 
-    styles() {
-        return css`
-            div {
-                background-color: blue;
-                margin: 0;
-                padding-bottom: 10px;
-            }
-        `
-    }
-
     create() {
          return {tag: "div",
                  children: [
@@ -123,20 +113,63 @@ class App extends Component {
         console.log(this.node);
     }
 
+    styles() {
+        return css`
+            div {
+                background-color: yellow;
+                margin: 0;
+                padding-bottom: 10px;
+            }
+        `
+    }
+
     create() {
-        return {
-            tag: "div",
-            attributes: {style: "color: green; "} ,
-            children: [
-                {tag: "h1", 
-                children: [
-                    {
-                        tag: "TEXT_ELEMENT",
-                        nodeValue: "Hello world"
-                    }
-                ]
-                },
-                this.form.node]
+        return vdom`<div className = "test" id ="oi">
+                <h1> Hello world </h1>
+                <img src="../docs/gcd.png />
+                <br/>
+                <input value = "" placeholder = "cheeky" />
+                <p> This looks and feels like <strong>HTML and JSX</strong></p>
+                <a href = "https://google.com">Link</a>
+                <div>
+                    <ul>
+                        <li> Hello </li>
+                        <li> What's up </li>
+                    </ul>
+                    <table style="width:100%">
+                        <tr>
+                            <th>Firstname</th>
+                            <th>Lastname</th>
+                            <th>Age</th>
+                        </tr>
+                        <tr>
+                            <td>Jill</td>
+                            <td>Smith</td>
+                            <td>50</td>
+                        </tr>
+                        <tr>
+                            <td>Eve</td>
+                            <td>Jackson</td>
+                            <td>94</td>
+                        </tr>
+                    </table>
+                </div>
+                </div>`
+        
+            // {
+            // tag: "div",
+            // attributes: {style: "color: green; "} ,
+            // children: [
+            //     {tag: "h1", 
+            //     children: [
+            //         {
+            //             tag: "TEXT_ELEMENT",
+            //             nodeValue: "Hello world"
+            //         }
+            //     ]
+            //     },
+            //     this.form.node]
+            // }
                 // {tag: "button",
                 //  children: [
                 //      {
@@ -145,7 +178,6 @@ class App extends Component {
                 //      }
                 //  ],
                 //  events: {"click": () => this.render()}}]
-        } 
     }
 }
 

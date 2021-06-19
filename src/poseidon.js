@@ -11,8 +11,7 @@ const printDOMTree = (node, tabs = "") => {
         return prettyPrint;
     }
 }
- 
- 
+
 function updateDOMProperties(node, prevVNode, nextVNode) {
     //if this is a text node, update the text value
     if (prevVNode.tag == "TEXT_ELEMENT" && nextVNode.tag == "TEXT_ELEMENT") {
@@ -22,7 +21,11 @@ function updateDOMProperties(node, prevVNode, nextVNode) {
     //remove attributes
     Object.keys(prevVNode.attributes || [])
                 .forEach((key, _) => {
-                    node.removeAttribute(key);
+                    //for some special cases like className, need to access the property as a key
+                    //otherwise removeAttribute will not work
+                    //TODO: potentially change this into a map, are there other attributes this need to
+                    //be done for?
+                    key === 'className' ? node.removeAttribute('class') : node.removeAttribute(key);
         });
 
     //remove old event listeners 
@@ -35,6 +38,7 @@ function updateDOMProperties(node, prevVNode, nextVNode) {
     //add attributes
     Object.keys(nextVNode.attributes || [])
             .forEach((key, _) => {
+                //NOTE className not class
                 node[key] = nextVNode.attributes[key];
         });
 
@@ -148,7 +152,7 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
     var node = normalize(null);
     //same node, only update properties
     if (sameType) {
-        //means we have an element loaded in a list node
+        //means we have an element loaded in a list node since list nodes hand over fully rendered DOM nodes
         if (newVNode.tag === undefined) {
             updateQueue.push({op: REPLACE, details: {dom: nodeDOM, previous: prevVNode, node: newVNode}});
             node = newVNode;
@@ -176,15 +180,26 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
         //note if the DOM node is undefined, then that node has already been handled i.e. removed or added in a previous iteration
         if (nodeDOM) {
             updateQueue.push({op: DELETE, details: {parent: nodeDOM.parentNode, node: nodeDOM}});
+            //Note we want to to return here (i.e. not perform any work yet) to avoid removing DOM nodes before 
+            //we have processed all of the children (i.e. sibilings of the current node). This means we defer the `performWork` operation
+            //to be called by the parent. Note there is no scenario where we would encounter
+            //an empty newVNode that reaches this block without being called by a parent.
+            return node;
         }
     } else if (prevVNode.tag == "") {
-        //  create new node
+        //Double check: is this bit already implemented?
+        //-----------
+        //uses a similar heuristic to the React diffing algorithm
+        //if the nodes are dif create new node
+        //-----------
+        //create new node
         node = instantiate(newVNode);
         if (nodeDOM) {
             //return child, parent will handle the add to the queue
             return node;
         }
         updateQueue.push({op: APPEND, details: {parent: null, node: node}}); 
+        
     } else {
         //node has changed, so replace
         updateQueue.push({op: REPLACE, details: {dom: nodeDOM, previous: prevVNode, node: newVNode}});
@@ -282,7 +297,6 @@ class Component {
     //helper method for adding component-defined styles 
     addStyle() {
         //write own css parser
-        //guide e.g. https://medium.com/@benjamin.d.johnson/create-a-css-parser-using-template-literals-md-3905905a569e
         const style = document.createElement('style');
         const userStyles = this.styles();
         if (userStyles) {
@@ -304,7 +318,6 @@ class Component {
             } else {
                 cssNode.appendChild(document.createTextNode(text));
             }
-            console.log(cssNode);
             document.getElementsByTagName('head')[0].appendChild(cssNode);
         }
     }
@@ -337,12 +350,15 @@ class Component {
 class Listening {
     constructor() {
         this.handlers = new Set();
+        //represent the current state of the data
+        //used to determine when a change has happened and execute the corresponding handler
+        this.state = null;
     }
-    //represent the current state of the data
-    //used to determine when a change has happened and execute the corresponding handler
-    state; 
     //return summary of state
-    summarize;
+    summarize() {
+        return null;
+    }
+
     //used to listen to and execute handlers on listening to events
     fire() {
         this.handlers.forEach(handler => {
@@ -590,12 +606,19 @@ class Router {
     //connects patterns to callable objects (components or DOM elements to be rendered)
 }
 
-module.exports = {
+const exposed = {
     Component,
     List,
     Atom,
     ListOf,
     CollectionStore,
     CollectionStoreOf,
-    Router
+    Router,
+    css
+}
+
+if (typeof window === 'object') {
+    Object.assign(window, exposed)
+} else {
+    module.exports = exposed;
 }
