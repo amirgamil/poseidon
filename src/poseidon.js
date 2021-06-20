@@ -143,7 +143,7 @@ const normalize = (vNode) => {
  
 //main render method for reconciliation
 //newVNode: is new vDOM node to be rendered, 
-//prevVNode: is old node that was previously rendered
+//prevVNode: is old vDOM node that was previously rendered
 //nodeDOM: is the corresponding node in the DOM
 const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
     const sameType = prevVNode && newVNode && newVNode.tag === prevVNode.tag;
@@ -181,8 +181,8 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
         if (nodeDOM) {
             updateQueue.push({op: DELETE, details: {parent: nodeDOM.parentNode, node: nodeDOM}});
             //Note we want to to return here (i.e. not perform any work yet) to avoid removing DOM nodes before 
-            //we have processed all of the children (i.e. sibilings of the current node). This means we defer the `performWork` operation
-            //to be called by the parent. Note there is no scenario where we would encounter
+            //we have processed all of the children (to avoid indexing issues at line 168 causing us to skip nodes). This means we defer the 
+            //`performWork` operation to be called by the parent. Note there is no scenario where we would encounter
             //an empty newVNode that reaches this block without being called by a parent.
             return node;
         }
@@ -467,7 +467,7 @@ class List extends Component {
                 const domNode = new this.domElement(element, this.remove);
                 //note we pass the DOM nodes of the rendered component so that each defined component (i.e. domElement above) has 
                 //a reference to the actual DOM node being displayed on the web page. If we passed in a vDOM node, then 
-                //our rendering logic would instantiate a new DOM node and added it to the page but the component 
+                //our rendering logic would instantiate a new DOM node and add it to the page but the component 
                 //(elemnt of a list) would not have a reference to this DOM node locally and would not be able update 
                 //changes (on the web page) reflected to its state (and a goal of Poseidon is that we have self-managing components 
                 //so should be able to display changes to changes in atomic data directly within our own component)

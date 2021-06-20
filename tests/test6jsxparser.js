@@ -80,7 +80,6 @@ test('testHTMLElementParsing', t => {
             </div>`;
     app.render(selfClosing);
     t.is(root.innerHTML, `<div><img src="../docs/gcd.png"><p>Hello is a break working </p><br><input><p>Yes it's working</p></div>`)
-    console.log(app.vdom);
     //more HTML tags, strong and a
     const strongAndA =  vdom`
                 <div>    
@@ -89,6 +88,34 @@ test('testHTMLElementParsing', t => {
                 </div>
                 `
     app.render(strongAndA);   
-    console.log(root.innerHTML);          
     t.is(root.innerHTML, `<div><p>This looks and feels like <strong>HTML and JSX</strong></p><a href="https://google.com">Link</a></div>`)
+
+    //test some vdom template strings with js expressions
+    const js1 = vdom`<div>
+                    <p>${true ? "true" : false}</p>
+                    <p>${2 + 9 + 3}</p>
+                    ${false ? "this should not be displayed" : null}
+                    ${true ? vdom`<p>Hello</p>` : null}
+                </div>`;
+    app.render(js1);
+    t.is(root.innerHTML, `<div><p>true</p><p>14</p>
+                    <p>Hello</p>
+                </div>`);
+
+    //test jsx expression used as values to key and event handlers
+    const js2 = vdom`<div>
+                <input placeholder = "test" val = ${true} oninput = ${(evt) => console.log(evt.target.value)}/>
+            </div>`
+    app.render(js2);
+    t.is(root.innerHTML, `<div><input placeholder="test"></div>`);
+
+    //test mapping an array into a list (common pattern that crops up)
+    const js3 = vdom`<ul>
+                        ${Array.from(["a", "b", "c"]).map((element, _) => {
+                            return vdom`<li>${element}</li>`
+                        })}
+                    </ul>`
+    app.render(js3);
+    t.is(root.innerHTML, `<ul><li>a</li><li>b</li><li>c</li></ul>`);
+
 });

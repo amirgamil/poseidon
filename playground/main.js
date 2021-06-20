@@ -107,10 +107,16 @@ class Form extends Component {
 class App extends Component {
     init() {
         this.form = new Form();
+        this.isCool = true;
+        this.list = ["Cat", "Dog", "Parrot", "Turtle"]
     }
     
     debug() {
         console.log(this.node);
+    }
+
+    clicked(evt) {
+        console.log(evt.target.value);
     }
 
     styles() {
@@ -124,36 +130,39 @@ class App extends Component {
     }
 
     create() {
-        return vdom`<div className = "test" id ="oi">
-                <h1> Hello world </h1>
-                <img src="../docs/gcd.png />
-                <br/>
-                <input value = "" placeholder = "cheeky" />
-                <p> This looks and feels like <strong>HTML and JSX</strong></p>
-                <a href = "https://google.com">Link</a>
-                <div>
-                    <ul>
-                        <li> Hello </li>
-                        <li> What's up </li>
-                    </ul>
-                    <table style="width:100%">
-                        <tr>
-                            <th>Firstname</th>
-                            <th>Lastname</th>
-                            <th>Age</th>
-                        </tr>
-                        <tr>
-                            <td>Jill</td>
-                            <td>Smith</td>
-                            <td>50</td>
-                        </tr>
-                        <tr>
-                            <td>Eve</td>
-                            <td>Jackson</td>
-                            <td>94</td>
-                        </tr>
-                    </table>
-                </div>
+        return vdom`
+                <div className = "test" id ="oi">
+                    ${this.isCool ? vdom`<p>Cheeky nesting</p>` : null}
+                    <img src="../docs/gcd.png" />
+                    <br/>
+                    <input oninput = ${(evt) => this.clicked(evt)} value = ${this.isCool} placeholder = "cheeky" />
+                    <p> This looks and feels like <strong>HTML and JSX</strong></p>
+                    <button onclick=${(evt) => this.clicked(evt)}>${this.isCool}</button>
+                    <a href = "https://google.com">Link</a>
+                    <div>
+                        <ul>
+                            ${this.list.map((element, _) => {
+                                return vdom`<li> ${element} </li>`
+                            })}
+                        </ul>
+                        <table>
+                            <tr>
+                                <th>Firstname</th>
+                                <th>Lastname</th>
+                                <th>Age</th>
+                            </tr>
+                            <tr>
+                                <td>Jill</td>
+                                <td>Smith</td>
+                                <td>50</td>
+                            </tr>
+                            <tr>
+                                <td>Eve</td>
+                                <td>Jackson</td>
+                                <td>94</td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>`
         
             // {
@@ -183,3 +192,7 @@ class App extends Component {
 
 const app = new App();
 document.body.appendChild(app.node);
+
+
+
+
