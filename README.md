@@ -2,6 +2,8 @@
 ### Intro
 Poseidon is, to use a nice description by Reef, an anti-framework. It's a a no-dependency, component-based Javascript framework for rendering UI on the web. It aims at being lightweight, fast, and intuitive (i.e. easy to use) for building static and dynamic apps without compromising on .....
 
+Principles of least power - aims at offering as many of the rich features provided by frameworks like React and Bacbone while reducing as much as possible the overheads or levels of abstractions one needs to traverse in order to build cool stuff using the tool. In other words, if you can grasp a handful of small patterns that frequently crop-up, you can build really powerful tools. 
+
 To allow for a declarative, event-driven framework through which we interact with the UI, Poseidon distinguishes between UI that gets rendered and data that powers the UI. This takes a similar flavor to the model-view approach adopted by Backbone and more generally, the model-view-controller pattern. This allows us to encapsulate logic needed to update data when changes are made, so that we can decompose the changing data from the reusable DOM elements of the UI that should reflect those changes. 
 
 Concretely, this means that Poseidon provides a layer that interfaces with the UI in the forms of CollectionStores. This 
@@ -30,6 +32,12 @@ central stores or state becoming too clunky and unmanageable (some common compla
 7. Pure components and container components 
     - Container: interact directly with the store, have side-effects (e.g. List component)
     - Pure: mostly pure components, given same state will render the same UI
+8. If you're using a router, two common approaches
+    - If you have different pages that correspond to different components, have a simple switch statement on the current route
+    when composing the UI in `create` and return the node of the corresponding component accordingly
+    - If the component is largely similar and you only want to "toggle" certain parts of the UI or off, conditionals or ternary expressions directly within `create` are more convenients like
+    `${shouldLoad ? html`<h1>Unlocked!</h1>` : html`<h1>Locked :( </h1>`}`
+    (if you want to map samle handler to different paths, do `['path1', 'path2'].forEach(path => router.on(path, handler)))`
 
 ### Ideas to extend
 1. Make it more intuitive to connect data to stores to UI 
@@ -58,4 +66,4 @@ central stores or state becoming too clunky and unmanageable (some common compla
 
 ### Things that need to be looked into
 1. Component life-cycle updates
-
+2. Functional components

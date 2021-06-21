@@ -263,7 +263,7 @@ const VDOM_JSX_NODE = "<" + VDOM_PLACEHOLDER + ">"
 const CLOSED_TAG = "</";
 
 //take advantage of Javascript template literals which gives us a string and a list of interpolated values
-const vdom = (templates, ...values) => {
+const html = (templates, ...values) => {
     //create string and interpolate all of the ${} expressions with our constructed placeholder node 
     const vdomString = templates.join(VDOM_JSX_NODE, values);
     //HTML parsing
@@ -281,7 +281,7 @@ const vdom = (templates, ...values) => {
 //expose reader initially for debugging and testing purposes
 //named exposedV so different from poseidon since for now have two script tags for the playground
 const exposedV = {
-    vdom,
+    html,
     parseTag,
     Reader
 }

@@ -1,3 +1,4 @@
+
 class FormData extends Atom {
     get type() {
         return FormData;
@@ -106,9 +107,13 @@ class Form extends Component {
 
 class App extends Component {
     init() {
-        this.form = new Form();
-        this.isCool = true;
-        this.list = ["Cat", "Dog", "Parrot", "Turtle"]
+        this.router = new Router();
+        this.route = "";
+        this.router.on(["/home", "/about", "/test"], (route) => {
+            this.route = route;
+            console.log("yay i ran!");
+            this.render();
+        });
     }
     
     debug() {
@@ -119,74 +124,17 @@ class App extends Component {
         console.log(evt.target.value);
     }
 
-    styles() {
-        return css`
-            div {
-                background-color: yellow;
-                margin: 0;
-                padding-bottom: 10px;
-            }
-        `
-    }
-
     create() {
-        return vdom`
-                <div className = "test" id ="oi">
-                    ${this.isCool ? vdom`<p>Cheeky nesting</p>` : null}
-                    <img src="../docs/gcd.png" />
-                    <br/>
-                    <input oninput = ${(evt) => this.clicked(evt)} value = ${this.isCool} placeholder = "cheeky" />
-                    <p> This looks and feels like <strong>HTML and JSX</strong></p>
-                    <button onclick=${(evt) => this.clicked(evt)}>${this.isCool}</button>
-                    <a href = "https://google.com">Link</a>
-                    <div>
-                        <ul>
-                            ${this.list.map((element, _) => {
-                                return vdom`<li> ${element} </li>`
-                            })}
-                        </ul>
-                        <table>
-                            <tr>
-                                <th>Firstname</th>
-                                <th>Lastname</th>
-                                <th>Age</th>
-                            </tr>
-                            <tr>
-                                <td>Jill</td>
-                                <td>Smith</td>
-                                <td>50</td>
-                            </tr>
-                            <tr>
-                                <td>Eve</td>
-                                <td>Jackson</td>
-                                <td>94</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>`
-        
-            // {
-            // tag: "div",
-            // attributes: {style: "color: green; "} ,
-            // children: [
-            //     {tag: "h1", 
-            //     children: [
-            //         {
-            //             tag: "TEXT_ELEMENT",
-            //             nodeValue: "Hello world"
-            //         }
-            //     ]
-            //     },
-            //     this.form.node]
-            // }
-                // {tag: "button",
-                //  children: [
-                //      {
-                //          tag: "TEXT_ELEMENT",
-                //          nodeValue: "Re-render!"
-                //      }
-                //  ],
-                //  events: {"click": () => this.render()}}]
+       switch (this.route) {
+           case "/home":
+               return html`<div><h1>Home</h1><a href="/about">about</a></div>`
+            case "/about":
+                return html`<h1>About</h1>`
+            case "/test":
+                return html`<h1>Test</h1>`
+            default:
+                return html`<button onclick=${(evt) => this.router.navigate("/home")}>Go home</button>`
+       }
     }
 }
 

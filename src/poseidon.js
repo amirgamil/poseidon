@@ -600,10 +600,83 @@ function CollectionStoreOf(classOf) {
     };
 }
 
+const getRegexFromRouteString = (route) => {
+    let match;
+    while (match !== null) {
+        match = (/:\w+/).exec(route);
+        console.log(match);
+    }
+}
 
+
+//NOTE: this is a client-side router. This means that when the URL changes, it looks at the client-side
+//Javascript code to determine what to render. This means that if you're using any kind of web server
+//and serving the static content from there, either you must allow ALL routes or the routes you'd like to 
+//define on the client-side on the web server. If you don't do this, nothing will be served once you navigate to a route 
+//even if you've specified what to render through Poseidon.
 class Router {
-    //match-based router (i.e. builds a routing table)
-    //connects patterns to callable objects (components or DOM elements to be rendered)
+    //client-side router, match-based router (i.e. builds a routing table)
+    //constructor takes an object which maps names of routes to their corresponding path
+    //when passing routes, make sure to pass more general routes later since Poseidon will match them
+    //in that order
+    constructor() {
+        this.routes = new Map();        
+        this.options = {
+            context: window,
+            startListening: true
+        }
+
+        window.addEventListener('hashchange', () => this.test()); 
+        this.match(window.location.pathname);
+    }
+
+    test() {
+        console.log("HELLO!!");
+    }
+
+
+    //route-matching algorithm
+    //listener method for when the URL or hash changes to map to the new appropriate view
+    match(route) {
+        //construct Regex of the route
+        for (let [path, handler] of this.routes) {
+            const match = path.exec(route);
+            console.log(route);
+            //each route will be associated with a handler
+            //this handler will handle all of the rendering associated with a new change
+            if (match !== null) {
+                //do stuff eventually to get parameters from the route
+                console.log("I need to do stuff here");
+                //split parameters using the ?varName=varVal 
+                this.currentPath = path;
+                handler(route);
+            }
+
+            //call handler to deal with error?
+        }
+    }
+
+    navigate(path, options) {
+        console.log("Routing to ", path);
+        //TODO: add support for options (if you want to replace)
+        //add entry to browser's session history stack (will set the location's hash)
+        this.options.context.history.pushState(null, null, path);
+        //dispatch event of 'hashChange' to trigger our match method
+        this.match(path);
+    }
+
+    //used to map paths to handler functions which will get executed when navigated to8
+    on(paths, handler) {
+        if (Array.isArray(paths)) {
+            for (const path of paths) {
+                getRegexFromRouteString(path);
+                this.routes.set(new RegExp(path), handler);
+            }
+        } else {
+            this.routes.set(new RegExp(paths), handler)
+        }
+    } 
+
 }
 
 const exposed = {

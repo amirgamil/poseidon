@@ -9,7 +9,7 @@ const {
 } = require("../src/poseidon.js");
 
 const {
-    vdom
+   html 
 } = require("../src/vdom.js")
 
 
@@ -45,7 +45,7 @@ test.beforeEach(t => {
 test('testHTMLElementParsing', t => {
     const root = t.context.root;
     //div with nested elements
-    const testDiv = vdom`
+    const testDiv = html`
     <div className = "stuff" id = "smt"> 
         <h1> Hello </h1>
         <p> What's popping my fellow friend </p>
@@ -57,7 +57,7 @@ test('testHTMLElementParsing', t => {
 
     //div with list elements
     //intentionally use inconsistent spacing to make sure parser works in all cases
-    const testList = vdom`
+    const testList = html`
         <div className="wrapper">
             <ul>
                 <li>Item 1</li>
@@ -70,7 +70,7 @@ test('testHTMLElementParsing', t => {
     t.is(root.innerHTML, `<div class="wrapper"><ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul></div>`);
 
     //test special self-closing HTML tags
-    const selfClosing = vdom`
+    const selfClosing = html`
             <div>
                 <img src="../docs/gcd.png" />
                 <p> Hello is a break working </p>
@@ -81,7 +81,7 @@ test('testHTMLElementParsing', t => {
     app.render(selfClosing);
     t.is(root.innerHTML, `<div><img src="../docs/gcd.png"><p>Hello is a break working </p><br><input><p>Yes it's working</p></div>`)
     //more HTML tags, strong and a
-    const strongAndA =  vdom`
+    const strongAndA =  html`
                 <div>    
                     <p>This looks and feels like <strong>HTML and JSX</strong></p>
                     <a href = "https://google.com">Link</a>
@@ -91,11 +91,11 @@ test('testHTMLElementParsing', t => {
     t.is(root.innerHTML, `<div><p>This looks and feels like <strong>HTML and JSX</strong></p><a href="https://google.com">Link</a></div>`)
 
     //test some vdom template strings with js expressions
-    const js1 = vdom`<div>
+    const js1 = html`<div>
                     <p>${true ? "true" : false}</p>
                     <p>${2 + 9 + 3}</p>
                     ${false ? "this should not be displayed" : null}
-                    ${true ? vdom`<p>Hello</p>` : null}
+                    ${true ? html`<p>Hello</p>` : null}
                 </div>`;
     app.render(js1);
     t.is(root.innerHTML, `<div><p>true</p><p>14</p>
@@ -103,16 +103,16 @@ test('testHTMLElementParsing', t => {
                 </div>`);
 
     //test jsx expression used as values to key and event handlers
-    const js2 = vdom`<div>
+    const js2 = html`<div>
                 <input placeholder = "test" val = ${true} oninput = ${(evt) => console.log(evt.target.value)}/>
             </div>`
     app.render(js2);
     t.is(root.innerHTML, `<div><input placeholder="test"></div>`);
 
     //test mapping an array into a list (common pattern that crops up)
-    const js3 = vdom`<ul>
+    const js3 = html`<ul>
                         ${Array.from(["a", "b", "c"]).map((element, _) => {
-                            return vdom`<li>${element}</li>`
+                            return html`<li>${element}</li>`
                         })}
                     </ul>`
     app.render(js3);
