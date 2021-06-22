@@ -38,6 +38,7 @@ central stores or state becoming too clunky and unmanageable (some common compla
     - If the component is largely similar and you only want to "toggle" certain parts of the UI or off, conditionals or ternary expressions directly within `create` are more convenients like
     `${shouldLoad ? html`<h1>Unlocked!</h1>` : html`<h1>Locked :( </h1>`}`
     (if you want to map samle handler to different paths, do `['path1', 'path2'].forEach(path => router.on(path, handler)))`
+9. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
 
 ### Ideas to extend
 1. Make it more intuitive to connect data to stores to UI 

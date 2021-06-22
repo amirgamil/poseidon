@@ -109,12 +109,21 @@ class App extends Component {
     init() {
         this.router = new Router();
         this.route = "";
-        this.router.on(["/home", "/about", "/test"], (route) => {
-            this.route = route;
-            console.log("yay i ran!");
-            this.render();
-        });
+        this.router.on({
+            route: ["/home", "/about", "test"], 
+            handler: (route) => {
+                this.route = route;
+                this.render();
+            }}, 
+            {
+            route: "/:user",
+            handler: (route, params) => {
+                this.route = "user";
+                this.params = params;
+            }}
+        )
     }
+
     
     debug() {
         console.log(this.node);
@@ -125,16 +134,24 @@ class App extends Component {
     }
 
     create() {
-       switch (this.route) {
-           case "/home":
-               return html`<div><h1>Home</h1><a href="/about">about</a></div>`
-            case "/about":
-                return html`<h1>About</h1>`
-            case "/test":
-                return html`<h1>Test</h1>`
-            default:
-                return html`<button onclick=${(evt) => this.router.navigate("/home")}>Go home</button>`
-       }
+        console.log(window.location.href);
+        return html`<div>
+            <p>Whoah</p>
+            ${() => {
+            switch (this.route) {
+                case "/home":
+                    return html`<div><h1>Home</h1><a href="/about">about</a></div>`
+                case "/about":
+                    return html`<div><h1>About</h1><a href="/test">test</a></div>`
+                case "/test":
+                    return html`<div><h1>Test</h1><a href = "/home">home</a></div>`
+                case "user":
+                    return html`<h1>${this.params.user}</h1>`
+                default:
+                    return html`<button onclick=${(evt) => this.router.navigate("/home")}>Go home</button>`
+                }
+            }}
+        </div>`
     }
 }
 

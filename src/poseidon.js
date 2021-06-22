@@ -600,12 +600,22 @@ function CollectionStoreOf(classOf) {
     };
 }
 
+//helper method to convert passed in paths into executable regex values to match against incoming routes
 const getRegexFromRouteString = (route) => {
     let match;
-    while (match !== null) {
-        match = (/:\w+/).exec(route);
-        console.log(match);
-    }
+    let paramNames = []
+    console.log(route);
+    //construct a new regex match by replacing paramnames as defined in the route e.g. /:user
+    //with corresponding regex bits to match any possible values
+    route = route.replace(/[:*](\w+)/g, (full, paramName, _) => {
+        paramNames.push(paramName);
+        //replace any paramname with a regex to match any value (since any value can be passed in as a parameter e.g. any user!)
+        //matches any character that is not a /
+        return '([^\/]+)'
+    });
+    //may be the end of the route or may there may be more stuff, so add a regex to capture this
+    route += '(?:\/|$)'
+    return [new RegExp(route), paramNames];
 }
 
 
@@ -625,56 +635,68 @@ class Router {
             context: window,
             startListening: true
         }
-
-        window.addEventListener('hashchange', () => this.test()); 
-        this.match(window.location.pathname);
+        this.matchHelper = () => {
+            return this.match(window.location.pathname);
+        }
+        //used to detect when URL changes and execute a handler accordingly
+        window.addEventListener('popstate', this.matchHelper); 
     }
-
-    test() {
-        console.log("HELLO!!");
-    }
-
 
     //route-matching algorithm
     //listener method for when the URL or hash changes to map to the new appropriate view
     match(route) {
-        //construct Regex of the route
-        for (let [path, handler] of this.routes) {
-            const match = path.exec(route);
-            console.log(route);
+        //match route against dictionary of defined paths to their relevant attributes
+        for (let [path, {pathRoute, handler, params}] of this.routes) {
+            console.log(pathRoute);
+            const match = pathRoute.exec(route);
+            console.log(match);
             //each route will be associated with a handler
             //this handler will handle all of the rendering associated with a new change
             if (match !== null) {
-                //do stuff eventually to get parameters from the route
-                console.log("I need to do stuff here");
+                //remove the first / from the route
+                console.log(params);
+                //loop through values and add each value with its associated parameter
+                const routeParams = match.slice(1).
+                                    reduce((allParams, value, index) => {
+                                            console.log(index);
+                                            allParams[params[index]] = value;
+                                            return allParams;
+                                            }, {});
                 //split parameters using the ?varName=varVal 
                 this.currentPath = path;
-                handler(route);
+                handler(route, routeParams);
             }
 
-            //call handler to deal with error?
         }
     }
 
-    navigate(path, options) {
-        console.log("Routing to ", path);
-        //TODO: add support for options (if you want to replace)
-        //add entry to browser's session history stack (will set the location's hash)
-        this.options.context.history.pushState(null, null, path);
-        //dispatch event of 'hashChange' to trigger our match method
-        this.match(path);
+    navigate(path, {replace = false} = {}) {
+        if (window.location.pathname != path) {
+            if (replace) {
+                this.options.context.history.replaceState(null, document.title, path);
+            } else {
+                //add entry to browser's session history stack (will set the location's hash)
+                this.options.context.history.pushState(null, document.title, path);
+            }
+            this.match(path);
+        }
     }
 
-    //used to map paths to handler functions which will get executed when navigated to8
-    on(paths, handler) {
-        if (Array.isArray(paths)) {
-            for (const path of paths) {
-                getRegexFromRouteString(path);
-                this.routes.set(new RegExp(path), handler);
+    //used to map paths to handler functions which will get executed when navigated to
+    on(...pageRoutes) {
+        for (const {route, handler} of pageRoutes) {
+            if (Array.isArray(route)) {
+                for (const path of route) {
+                    const [regPath, params] = getRegexFromRouteString(path);
+                    this.routes.set(path, {pathRoute: regPath, handler: handler, params: params});
+                }
+            } else {
+                const [regPath, params] = getRegexFromRouteString(route);
+                this.routes.set(route, {pathRoute: regPath, handler: handler, params: params})
             }
-        } else {
-            this.routes.set(new RegExp(paths), handler)
         }
+        //route the current url
+        this.match(window.location.pathname);
     } 
 
 }

@@ -99,8 +99,7 @@ test('testHTMLElementParsing', t => {
                 </div>`;
     app.render(js1);
     t.is(root.innerHTML, `<div><p>true</p><p>14</p>
-                    <p>Hello</p>
-                </div>`);
+                    <p>Hello</p></div>`);
 
     //test jsx expression used as values to key and event handlers
     const js2 = html`<div>

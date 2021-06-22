@@ -150,18 +150,27 @@ const parseJSExpr = (reader, values, attribute) => {
     var val = values.shift();
     //if the value returns null we don't want to render anything
     if (val) {
-        //if the val either a function or an object which was generated
-        //by a nested vdom template literal, we return it directly
-        if (typeof val === 'object' || typeof val === 'function') {
-            reader.skipSpaces();
-            return val;
-        } //otherwise, we cast any other non-string primitives if the returned value is not already a string to prevent unnecessary computations
-        else if (typeof val !== 'string') val = String(val); 
         //if this is a JSX expression associated with some key, return the value obtained directly instead of parsing it as a HTML node
         if (attribute) {
             reader.skipSpaces();
-            return val
+            //if the val either a function or an object which was generated
+            //by a nested vdom template literal, we return it directly
+            //otherwise, we cast any other non-string primitives if the returned value is not already a string to prevent unnecessary computations
+            if (typeof val === 'function' || typeof val === 'object') return val;
+            else if (typeof val !== 'string') val = String(val);
+            return val;
         }
+        //Not DRY, but the alternative is some hard to understand gymnastics
+        if (typeof val === 'object' || typeof val === 'function') {
+            reader.skipSpaces();
+            //if an anonymous function is passed in as a body execute it
+            if (typeof val === 'function') {
+                return val();
+            } else {
+                return val;
+            }
+        } else if (typeof val !== 'string') val = String(val); 
+
         //notice this set-up nicely allows for nested vdom expressions (e.g. we can return another vdom template literal based on some
         //Javascript expression within another vdom)
         const readerNewExpression = new Reader(val);
