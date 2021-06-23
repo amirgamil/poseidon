@@ -117,4 +117,6 @@ test('testHTMLElementParsing', t => {
     app.render(js3);
     t.is(root.innerHTML, `<ul><li>a</li><li>b</li><li>c</li></ul>`);
 
+    app.render(html`<p><a>Hello</a>      check it</p>`)
+    console.log(root.innerHTML);
 });

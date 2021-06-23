@@ -140,7 +140,7 @@ class App extends Component {
             ${() => {
             switch (this.route) {
                 case "/home":
-                    return html`<div><h1>Home</h1><a href="/about">about</a></div>`
+                    return html`<div><h1 style="text-underline-position: center">Home</h1><a href="/about">about</a></div>`
                 case "/about":
                     return html`<div><h1>About</h1><a href="/test">test</a></div>`
                 case "/test":

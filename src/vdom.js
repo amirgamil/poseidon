@@ -28,17 +28,18 @@ class Reader {
         var currIndex = this.index;
         var finalIndex = currIndex;
         var quoteCount = 0;
-        while (!this.specialCharacters.has(this.currentChar)) {
+        //keep looping while we don't encounter a special character of if we're inside a quote
+        while ((this.index < this.length) && (!this.specialCharacters.has(this.currentChar) || quoteCount === 1)) {
             //if we have quotes, skip them
             //TODO: add more robust type checking we have the same type of quote
             if (this.currentChar === '"' || this.currentChar === "'") {
                 //adjust starting point of returned work if we encounter an opening quote
                 if (quoteCount === 0) { 
-                    quoteCount++;
+                    quoteCount += 1;
                     currIndex = this.index + 1;
                 } else if (quoteCount === 1) {
                     finalIndex = this.index - 1;
-                    quoteCount++;
+                    quoteCount += 1;
                 }  
             } else if (this.currentChar === '/') {
                 //handle special case where next word might be adjacent to a /> tag so return the word before
@@ -50,7 +51,9 @@ class Reader {
             } 
             this.consume();
         }
-        if (quoteCount == 1) throw 'Error parsing quotes as values!';
+        if (quoteCount == 1) { 
+            throw 'Error parsing quotes as values!';
+        }
 
         //skip any spaces for future
         this.skipSpaces();
@@ -93,7 +96,6 @@ class Reader {
     skipPastChar(char) {
         var text = this.getUntilChar(char);
         text += this.consume();
-        this.skipSpaces();
         return text;
     }
 }
@@ -107,7 +109,6 @@ const parseChildren = (closingTag, reader, values) => {
         if (foundClosingTag(closingTag, reader)) {
             return children;
         }
-        reader.skipSpaces();
         var nextChild = parseTag(reader, values);
         while (nextChild !== CLOSED_TAG) {
             //only append child if it's not null or undefined
@@ -183,9 +184,12 @@ const parseJSExpr = (reader, values, attribute) => {
 
 //parse a complete HTML node tag 
 const parseTag = (reader, values) => {
+    console.log("start of parsing: ", reader.currentChar);
     //if the current char is not a < tag, then either we've finished parsing valid tags or this is a text node
     if (reader.currentChar !== '<') {
+        console.log("fist:", reader.currentChar);
         const word = reader.getUntilChar('<');
+        console.log(word);
         //we've reached the end of parsing
         if (!word) return null;
         //otherwise, we've found a text node!
@@ -224,12 +228,12 @@ const parseTag = (reader, values) => {
         }
         //key on its own is still valid, so check if we need to map to a specific value
         if (reader.currentChar !== '=') {
-            node.attributes[key] = null;
+            node.attributes[key] = true;
             continue;
         }
         //skip equal sign
         reader.skipToNextChar();
-        //get value associated with this key, TODO: not sure about this bit, what if mapping to a non-template literal like a variable
+        //get value associated with this key 
         let value = reader.getNextWord();
         //getNextWord stops at some special characters, one of which is < which is the start of the VDOM_JSX_Node
         //so check if this is a placeholder before parsing the JS expression to get the value associated with this key
@@ -250,11 +254,10 @@ const parseTag = (reader, values) => {
             node.attributes[key] = value;
         }
     }
-    //skip closing > 
+    //skip closing > of node definition and any spaces/new lines
     reader.skipToNextChar();
     //match actual body of the node
     if (!specialChar) node.children = parseChildren(name, reader, values);
-    reader.skipSpaces();
     //return JSON-formatted vdom node
     return node;
 }

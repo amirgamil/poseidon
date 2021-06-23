@@ -1,0 +1,166 @@
+html, body {
+    width: 100%;
+    height:100%;
+    margin: 0;
+}
+
+body {
+    background: black;
+}
+
+/*rain*/
+.animation {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    flex-grow: 3;
+    align-items: center;
+}
+/*lightning*/
+.animation:before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    animation: lightning 1.5s linear infinite 3s;
+    opacity: 0;
+}
+
+@keyframes rain {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 20% 100%;
+    }
+}
+
+@keyframes lightning {
+    0% {
+        opacity: 0;
+    }
+    10% {
+        opacity: 0;
+    }
+    11% {
+        opacity: 1;
+    }
+
+    14% {
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 0;
+    }
+
+    21% {
+        opacity: 1;
+    }
+
+    24% {
+        opacity: 0;
+    }
+
+    104% {
+        opacity: 0;
+    }
+
+}
+
+audio {
+    display: none im !important;
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    bottom: 0;
+}
+
+.intro {
+    border: 0.2px solid white;
+    border-radius: 5px;
+    padding: 10px;
+    position: absolute;
+}
+p {
+    font-family: 'Viaoda Libre', cursive;
+    color: white;
+    text-align: center
+}
+.alive {
+    font-size: 30px;
+}
+
+.alive {
+    animation: pulse 5s infinite;
+    opacity: 0;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 0.25;
+    }
+    
+    20% {
+        opacity: 0.5;
+    }
+
+    30% {
+        opacity: 0.75;
+    }
+
+    40% {
+        opacity: 1;
+    }
+
+    60% {
+        opacity: 0.75;
+    }
+
+    70% {
+        opacity: 0.5;
+    }
+
+    80% {
+        opacity: 0.25;
+    }
+
+    90% {
+        opacity: 0;
+    }
+}
+
+a {
+    text-decoration: underline;
+    color: white;
+}
+
+footer {
+    color: white;
+    position: absolute;
+    bottom: 5px;
+}
+
+button {
+    text-decoration: none;
+    border: none;
+    background: none;
+    color: white;
+    font-size: 20px;
+    font-family: 'Viaoda Libre', cursive;
+}
+
+button:hover {
+    cursor: pointer;
+}
+
+  

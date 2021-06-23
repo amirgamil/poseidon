@@ -98,6 +98,7 @@ const updateQueue = [];
 
 //used to update DOM operations from the queue
 const performWork = () => {
+    var node = null;
     while (updateQueue.length > 0) {
         //removes and returns item at index 0
         //TODO: is there a more optimized way of doing this
@@ -118,6 +119,7 @@ const performWork = () => {
                 //update properties
                 updateDOMProperties(dom, prev, next);
                 dom.replaceWith(next);
+                node = next;
                 break;
             case DELETE:
                 parent = item.details.parent;
@@ -131,6 +133,7 @@ const performWork = () => {
                 updateDOMProperties(dom, prev, newNode);
         }
     }
+    return node;
 }
 
 //used to normalize vDOM nodes to prevent consantly checking if nodes are undefined before accessing properties
@@ -206,7 +209,11 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
     }
 
     //Done diffing so we can now render the updates
-    performWork();
+    const res = performWork();
+    //one edge cases that arises is when we attempt to replace the entire DOM tree (i.e. on first iteration) - we push to the queue 
+    //but never assign node which we initialize to `normalize(null)`. This would result in incorrectly updating the DOM to null so we check
+    //for this case here
+    if (res && node.tag === "") node = res;
     return node;
 }
  
@@ -604,7 +611,6 @@ function CollectionStoreOf(classOf) {
 const getRegexFromRouteString = (route) => {
     let match;
     let paramNames = []
-    console.log(route);
     //construct a new regex match by replacing paramnames as defined in the route e.g. /:user
     //with corresponding regex bits to match any possible values
     route = route.replace(/[:*](\w+)/g, (full, paramName, _) => {
@@ -647,18 +653,14 @@ class Router {
     match(route) {
         //match route against dictionary of defined paths to their relevant attributes
         for (let [path, {pathRoute, handler, params}] of this.routes) {
-            console.log(pathRoute);
             const match = pathRoute.exec(route);
-            console.log(match);
             //each route will be associated with a handler
             //this handler will handle all of the rendering associated with a new change
             if (match !== null) {
                 //remove the first / from the route
-                console.log(params);
                 //loop through values and add each value with its associated parameter
                 const routeParams = match.slice(1).
                                     reduce((allParams, value, index) => {
-                                            console.log(index);
                                             allParams[params[index]] = value;
                                             return allParams;
                                             }, {});
