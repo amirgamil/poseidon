@@ -46,7 +46,7 @@ test('testHTMLElementParsing', t => {
     const root = t.context.root;
     //div with nested elements
     const testDiv = html`
-    <div className = "stuff" id = "smt"> 
+    <div class = "stuff" id = "smt"> 
         <h1> Hello </h1>
         <p> What's popping my fellow friend </p>
     </div>
@@ -58,7 +58,7 @@ test('testHTMLElementParsing', t => {
     //div with list elements
     //intentionally use inconsistent spacing to make sure parser works in all cases
     const testList = html`
-        <div className="wrapper">
+        <div class="wrapper">
             <ul>
                 <li>Item 1</li>
                 <li>Item 2</li>

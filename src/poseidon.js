@@ -21,11 +21,7 @@ function updateDOMProperties(node, prevVNode, nextVNode) {
     //remove attributes
     Object.keys(prevVNode.attributes || [])
                 .forEach((key, _) => {
-                    //for some special cases like className, need to access the property as a key
-                    //otherwise removeAttribute will not work
-                    //TODO: potentially change this into a map, are there other attributes this need to
-                    //be done for?
-                    key === 'className' ? node.removeAttribute('class') : node.removeAttribute(key);
+                    node.removeAttribute(key);
         });
 
     //remove old event listeners 
@@ -38,8 +34,9 @@ function updateDOMProperties(node, prevVNode, nextVNode) {
     //add attributes
     Object.keys(nextVNode.attributes || [])
             .forEach((key, _) => {
-                //NOTE className not class
-                node[key] = nextVNode.attributes[key];
+                const val = nextVNode.attributes[key];
+                //need to handle class differently 
+                key === 'class' ? node.className = val : node[key] = val;
         });
 
     //add event listeners

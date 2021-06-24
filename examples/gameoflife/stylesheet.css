@@ -1,0 +1,27 @@
+html, body {
+    margin: 0;
+}
+
+
+.board, .simulation {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 15px;
+    position: absolute;
+}
+
+.cell {
+    position: absolute;
+    background-color: black;
+    z-index: 5;
+    width: 10px;
+    height: 10px;
+}
+
+footer {
+    position: absolute;
+    bottom: 5px;
+    width: 100%;
+    text-align: center;
+}

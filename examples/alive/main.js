@@ -15,12 +15,12 @@ class App extends Component {
     }
 
     create() {
-        return html`<main><div className="animation">
+        return html`<main><div class="animation">
             <audio src="./audio.mp3" preload="auto"></audio>
-            ${!this.start ? html`<div className="intro">
+            ${!this.start ? html`<div class="intro">
                 <button onclick=${this.startMusic}>click me</button>
                 <p>Audio on :)</p>
-            </div>` : html`<p className="alive"><a href="https://github.com/amirgamil/poseidon">Poseidon</a> is alive</p>
+            </div>` : html`<p class="alive"><a href="https://github.com/amirgamil/poseidon">Poseidon</a> is alive</p>
             `}
             <footer>Built by <a href="https://amirbolous.com">Amir</a></footer>
         </div>
