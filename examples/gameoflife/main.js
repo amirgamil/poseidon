@@ -9,127 +9,146 @@ const Cell = (data) => {
         }
     }
 }
-
-
-
-const randomWindowX = () => {
-    return Math.random() * window.innerWidth - SQUARELENGTH;
-}
-const randomWindowY = () => {
-    //save space for footer
-    return Math.random() * window.innerHeight - 35;
-}
-
 //initial number of particles in the simulation
-const INITIAL_NUM = 200;
+const INITIAL_NUM = 500;
 //set width/height of a square to a fixed 10px
 const SQUARELENGTH = 10;
 
-//helper method to check whether a neighboring cell is in bounds
-const isInBounds = (x, y, maxRows, maxCols) => {
-    if (x < 0 || y < 0 || x >= maxRows || y >= maxCols) {
-        return false;
-    }
-    return true;
-}
-
-//helper method to check the number of adjacent cells that are alive 
-const numAdjAlive = (row, col, grid, map, neighbors) => {
-    var count = 0;
-    const nextSteps = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
-    console.log(neighbors);
-    for (let next of neighbors) {
-        const adjCell = map.get(next[0].toString() + "," + next[1].toString());
-        //recall an adjacent cell may not have been initialized yet in which case it's still dead naturally
-        count += adjCell ? adjCell[2] : 0; 
-    }
-    return count;
-}
-
 //board contains all of the cells 
 class Board extends Component {
-    init() {
-        //2D array represent list of all possible grid positions
+    init(initNum = INITIAL_NUM) {
+        //2D array representing the cells on the board
         this.grid = []
+        //2D array representing state of each cell - alive or dead. 0 indicates dead, any non-zero value indicates alive
+        //with the value indicating the age
+        this.world = []
+        this.table = document.createElement('table');
+        this.table.className = 'world';
         //loop through intervals of `SQUARELENGTH` for each of the rows
-        //memoize neighbors for optimization
-        this.neighbors = new Map()
-        const maxRows = Math.floor((window.innerWidth - SQUARELENGTH) / SQUARELENGTH);
-        const maxCols= Math.floor((window.innerHeight- SQUARELENGTH) / SQUARELENGTH);
-        const nextSteps = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
-        for (let i = 0; i < window.innerWidth - SQUARELENGTH; i += SQUARELENGTH) {
-            const rowI = []
-            for (let j = 0; j < window.innerHeight - 35; j += SQUARELENGTH) {
-                rowI.push(j);
-                const adj =  [];
-                //get neighbors and add them
-                for (let next of nextSteps) {
-                    let nextX = i + next[0];
-                    let nextY = j + next[1];
-                    if (isInBounds(nextX, nextY, maxRows, maxCols)) {
-                        adj.push([nextX, nextY]);
-                    } 
-                }
-                this.neighbors.set(this.grid.length.toString() + "," + j.toString(), adj);
+        //add padding to account for gaps between cells so that game canvas does not stretch beyond full screen
+        this.maxRows = Math.floor((window.innerHeight - 50) / (SQUARELENGTH + 4));
+        this.maxCols= Math.floor((window.innerWidth- 50) / (SQUARELENGTH + 1));
+        for (let i = 0; i < this.maxRows; i++) {
+            this.grid[i] = [];
+            this.world[i] = [];
+            var line = document.createElement('tr');
+            for (let j = 0; j < this.maxCols; j++) {
+                var cell = document.createElement('td');
+                cell.style.background = '#F0F0F0';
+                cell.className = 'cell'
+                cell.addEventListener("mousedown", (evt) => this.onMouseDownHandler(i, j, evt));
+                cell.addEventListener("mouseup", (evt) => this.onMouseUpHandler(i, j, evt));
+                cell.addEventListener("mouseover", (evt) => this.onMouseOverHandler(i, j, evt));
+                //set the cell in the grid
+                this.grid[i][j] = cell;
+                this.world[i][j] = 0
+                //register event handlers here eventually
+                line.appendChild(cell);
             }
-            //append entire row to grid
-            this.grid.push(rowI);
+            this.table.appendChild(line);
         }
 
-
-        //store the entire list of particles as an array 
-        //store lists as arrays of [xPos, yPos, state] where state = 1 indicates alive and state = 0 indicates dead
-        //note xPos, yPos are the actual pixel values on the screen
-        this.cells = [];
-        //keep map of string <row, col> to cooresponding [xPos, yPos, isAlive]
-        this.mapGridToState = new Map();
         //initial set up of particles
-        for (let i = 0; i < INITIAL_NUM; i++) {
+        for (let i = 0; i < initNum; i++) {
             //randomly selecting a specific cell is equivalent of randomly selecting an entry from our grid
             const row = Math.floor(Math.random() * this.grid.length);
-            const xPos = SQUARELENGTH * row;
-            const yPos = Math.floor(Math.random() * this.grid[0].length);
-            //(xPos, yPos) defines the upper left-hand corner of a cell
-            const cell = [xPos, this.grid[row][yPos], 1];
-            this.cells.push(cell);
-            this.mapGridToState.set(xPos.toString() + "," + yPos.toString(), cell); 
+            const col = Math.floor(Math.random() * this.grid[0].length);
+            this.world[row][col] = 1;
+            this.grid[row][col].style.background = 'black';
         }
     } 
+
+
+    //helper method to check whether a neighboring cell is in bounds
+    isInBounds(x, y) {
+        if (x < 0 || y < 0 || x >= this.maxRows || y >= this.maxCols) {
+            return false;
+        }
+        return true;
+    }
+
+    //helper method to check the number of adjacent cells that are alive 
+    numAdjAlive(row, col) {
+        var count = 0;
+        const nextSteps = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+        for (let next of nextSteps) {
+            const nextRow = row + next[0];
+            const nextCol = col + next[1];
+            if (!this.isInBounds(nextRow, nextCol)) continue;
+            //recall an adjacent cell may not have been initialized yet in which case it's still dead naturally
+            count += this.isAlive(nextRow, nextCol);
+        }
+        return count;
+    }
+
+    isAlive(row, col) {
+        return this.world[row][col] ? 1 : 0; 
+    }
+
+    changeCellState(i, j) {
+        if (this.world[i][j] === 1) {
+            this.world[i][j] = 0;
+            this.grid[i][j].style.background = '#90EE90'; 
+        } else {
+            this.world[i][j] = 1;
+            this.grid[i][j].style.background = 'black';
+        }
+        this.render();
+    }
+
+    onMouseOverHandler(i, j, evt) {
+        if (this.mouseDown) {
+            this.changeCellState(i, j)
+        }
+    }
+
+    onMouseDownHandler(i, j, evt) {
+        console.log(i, j);
+        this.changeCellState(i, j);
+        this.mouseDown = true;
+    }
+
+    onMouseUpHandler(i, j, evt) {
+        this.mouseDown = false;
+    }
+
     //represents a step to compute the next frame of the simulation 
     step() {
-
         //check 3 rules
         //1. Any live cell with two or three neighbors survives
         //2. Any dead cell with three live neighbors becomes a live cell
         //3. All other live cells die in the next generation
-        const newCells = []
+        const copyNewWorld = [];
         for (let row = 0; row < this.grid.length; row++) {
+            copyNewWorld[row] = []
             for (let col = 0; col < this.grid[0].length; col++) {
-                //recall values in this.grid [x, y] consist of 0-indexed rows and SQUARELENGTH * 0-indexedcols 
-                const yCol = SQUARELENGTH * col;
-                const key =  row.toString() + "," + yCol.toString();
-                const cell = this.mapGridToState.get(key);
-                const numAdjacentAlive = numAdjAlive(row, col, this.grid, this.mapGridToState, this.neighbors.get(key));
-                console.log(numAdjacentAlive);
-                if (cell) {
-                    //if two or more neighbors are alive, the cell lives on, otherwise it should die
-                    cell[2] = Number(numAdjacentAlive === 2 || numAdjacentAlive === 3);
-                    if (cell[2]) newCells.push(cell);
-                } else {
-                    if (numAdjacentAlive === 3) {
-                        //dead cell becomes alive
-                        //note we multiply row by squarelength since recall we appended multiples of squarelength in column
-                        //but rows are 0-indexed
-                        const newCell = [SQUARELENGTH * row, col, 1];
-                        //set new cell in map and append it to our display cells
-                        this.mapGridToState.set([row, col], newCell);
-                        newCells.push(newCell);
+                //do stuff
+                //check if is alive
+                const cell = this.grid[row][col];
+                const numNeighborsAlive = this.numAdjAlive(row, col); 
+                if (this.isAlive(row, col)) {
+                    if (numNeighborsAlive === 2 || numNeighborsAlive === 3) {
+                        //increment the age of the cell
+                        copyNewWorld[row][col] = 1 + this.grid[row][col];
+                        cell.style.background = cell.style.background; 
+                    } else {
+                        copyNewWorld[row][col] = 0;
+                        //change to light green color to indicate it has died
+                        cell.style.background = '#90EE90';
                     }
+                } else {
+                    if (numNeighborsAlive === 3) {
+                       cell.style.background = 'black'; 
+                       copyNewWorld[row][col] = 1;
+                    } else {
+                        copyNewWorld[row][col] = 0;
+                        // cell.style.background = '#F0F0F0';
+                    } 
+                    
                 }
             }
         }
-        this.cells = newCells;
-        console.log(this.cells);
+        this.world = copyNewWorld;
     }
 }
 
@@ -139,28 +158,27 @@ class BoardSimulation extends Component {
         this.boardSystem = new Board();
         //timestamp of last step call
         let lastTime = 0; 
-        const step = (currentTime) => {
-            if (!lastTime || currentTime - lastTime > 5000) {
-                //only update state every 300ms
-                this.boardSystem.step();
-                console.log(this.boardSystem.cells);
-                this.render();
+        this.step = () => {
+            this.boardSystem.step();
+            this.render();
+        };
+
+        this.run = (currentTime) => {
+            if (!lastTime || currentTime - lastTime > 100) {
+                // var t0 = performance.now();
+                this.step();
+                // var t1 = performance.now();
+                // console.log("render took " + (t1 - t0) + "miliseconds");
                 lastTime = currentTime;
             }
-            window.requestAnimationFrame(step);
-        };
-        // step();
-        setTimeout(() => {
-            this.boardSystem.step();
-            console.log(this.boardSystem.cells);
-            this.render();
-        }, 5000);
-        //eventually add controls to set parameters in the simulation
+            //set ID returned by requestAnimationFrame so we can stop it in the future
+            this.req = window.requestAnimationFrame(this.run);
+        }
     }
 
     create() {
         return html`<div class = "simulation">
-            ${this.boardSystem.cells.map(cell => Cell(cell))}
+            ${this.boardSystem.table}
         </div>`
     }
 }
@@ -168,11 +186,52 @@ class BoardSimulation extends Component {
 class App extends Component {
     init() {
         this.boardSimulation= new BoardSimulation();
+        this.setNumber = this.setNumber.bind(this);
+        this.chageGameState = this.chageGameState.bind(this);
+        this.running = false;
+    }
+
+    //mark this function as async since we don't know how long it will take for the user to pass in their input
+    //this prevents a `hander took ___` warning 
+    async setNumber(evt) {
+        //remove focus from the button
+        evt.target.blur();
+        //pause execution until the user has entered a value
+        const val = await window.prompt('Enter starting # of particles: ');
+        const parsedVal = parseInt(val, 10);
+        if (!isNaN(parsedVal)) {
+            console.log(parsedVal);
+            this.boardSimulation = new BoardSimulation(parsedVal);
+            this.render();
+        }
+    }
+
+    chageGameState(evt) {
+        if (this.running) {
+            //stop previously scheduled animation
+            window.cancelAnimationFrame(this.boardSimulation.req);
+            this.running = false;
+            this.render();
+        } else {
+            //start simulation
+            this.boardSimulation.run();
+            this.running = true;
+            this.render();
+        }
     }
 
     create() {
         return html`<main>
             ${this.boardSimulation.node}
+            <div class="displayBar">
+                <button onclick = ${this.chageGameState}>${this.running ? "Stop" : "Run"}</button>
+                <button onclick = ${() => this.boardSimulation.step()}>Step</button>
+                <button onclick=${() => { 
+                    this.boardSimulation.init();
+                    this.boardSimulation.render();
+                }}>Clear</button>
+                <button onclick=${(evt) => this.setNumber(evt)}>Set #</button>
+            </div>
             <footer>Built with <a href="https://github.com/amirgamil/poseidon">Poseidon</a> by <a href="https://amirbolous.com/">Amir</a></footer>
         </main>` 
     }
