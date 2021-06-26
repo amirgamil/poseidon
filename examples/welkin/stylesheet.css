@@ -2,6 +2,7 @@ html, body, main {
     width: 100%;
     height:100%;
     margin: 0 auto;
+    background: rgb(0,0,3);
 }
 
 
@@ -12,32 +13,24 @@ footer {
     text-align: center; 
 }
 
-p {
-    color: rgb(89, 88, 88);
+p, footer{
+    color:white ;
 }
 
-p, a {
+p, a, footer{
     font-family: 'Viaoda Libre', cursive;
+    font-size: 20px;
 }
 
 
 a {
     text-decoration: none;
-    color: gray;
+    color: white;
+    color: rgb(249, 196, 194);
 }
 
 a:hover{
     text-decoration: underline;
-}
-
-
-img {
-    max-width: 75vw; 
-    max-height: 75vh;
-    width: auto;
-    height: auto;
-    display: block;
-    box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
 }
 
 button {
@@ -49,18 +42,22 @@ button {
     font-family: 'Viaoda Libre', cursive;
     box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
     font-size: 1.5em;
-    position: relative;
+    position: absolute;
+    bottom: 30px;
     transition: top ease 1s;
 }
 
 button:hover {
-    top: -5px;
+    bottom: 35px;
     cursor: grab;
-    background: #90EE90;
+    background:rgb(225,150,147);
     color: white;
 }
 
-
-pre {
-    font-size: 2px;
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
+
