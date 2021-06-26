@@ -9,6 +9,7 @@
 //Reader class to abstract lexing and scanning of a vdom template string
 class Reader {
     constructor(string) {
+        //need to replace all backslashes with double backslash to make sure it's correctly rendered
         this.string = string;
         this.index = 0;
         this.length = string.length;
@@ -184,12 +185,9 @@ const parseJSExpr = (reader, values, attribute) => {
 
 //parse a complete HTML node tag 
 const parseTag = (reader, values) => {
-    console.log("start of parsing: ", reader.currentChar);
     //if the current char is not a < tag, then either we've finished parsing valid tags or this is a text node
     if (reader.currentChar !== '<') {
-        console.log("fist:", reader.currentChar);
         const word = reader.getUntilChar('<');
-        console.log(word);
         //we've reached the end of parsing
         if (!word) return null;
         //otherwise, we've found a text node!
@@ -218,7 +216,8 @@ const parseTag = (reader, values) => {
     //boolean variable to handle special self-closing HTML nodes like <img />
     var specialChar = false;
     //Match key-value pairs in initial node definition (i.e. from first < to first > tag, recall closing node tag is </)
-    while (reader.currentChar !== '>') {
+    //TODO: fix infinite loop if missing closing tag, need to test
+    while (reader.currentChar !== '>' && reader.index < reader.length) {
         const key = reader.getNextWord();
         //handle special self-closing tags like <br/> and <img />
         if (key === '/' && reader.peek() === '>') {
@@ -255,7 +254,7 @@ const parseTag = (reader, values) => {
         }
     }
     //skip closing > of node definition and any spaces/new lines
-    reader.skipToNextChar();
+    reader.consume();
     //match actual body of the node
     if (!specialChar) node.children = parseChildren(name, reader, values);
     //return JSON-formatted vdom node
