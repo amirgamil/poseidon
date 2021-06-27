@@ -18,23 +18,24 @@ class Painting extends Component {
         this.createBackground = this.createBackground.bind(this);
         this.drawSun = this.drawSun.bind(this);
         this.drawClouds = this.drawClouds.bind(this);
-        //initalize first painting, TODO: figure out way without pressing button
+        this.redraw = this.redraw.bind(this);
     }
 
     //helper method which will be iteratively called to populate different layers
     drawLayer(canvas, ctx, parameters) {
 
-        //get ready to draw a new overlapping area
-        ctx.beginPath();
         //each layer will consist of a certain number of drawn squares and rectangles
+        //note we floor all operations for more optimized performance 
         ctx.fillStyle = 'rgba('+parameters.red+','+parameters.green+','+parameters.blue+',1)';
         for (let shapes = 1; shapes < NUM_SHAPES_IN_LAYER; shapes++) {
+            //get ready to draw a new overlapping area
+            ctx.beginPath();
             //randomly generate width
-            const width = 150 * Math.random();
+            const width = Math.floor(150 * Math.random());
             //draw the shape
-            //we want each shape to be drawn to be offset a little bit from the last shape
+            //we want each shape to be offset a little bit from the last shape
             //offset darker colors with a larger position value closer to the bottom of the page
-            ctx.fillRect(shapes * width, (3 - Math.random())*parameters.position*15, width, canvas.height * Math.random());
+            ctx.fillRect(shapes * width, Math.floor((3 - Math.random())*parameters.position*15), width, Math.floor(canvas.height * Math.random()));
         }
 
         //update rgb values on next layer - TODO: experiment with these
@@ -50,6 +51,8 @@ class Painting extends Component {
         canvas.width = window.innerWidth;
         //save some space for the footer
         canvas.height = window.innerHeight;
+        //clear previous canvas to avoid memory leaks
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         this.RED_OFFSET = Math.floor(Math.random() * (MAX_RED - MIN_RED)) + MIN_RED; 
         this.GREEN_OFFSET = Math.floor(Math.random() * (MAX_GREEN - MIN_GREEN)) + MIN_GREEN; 
         this.BLUE_OFFSET = Math.floor(Math.random() * (MAX_BLUE - MIN_BLUE)) + MIN_BLUE; 
@@ -73,10 +76,6 @@ class Painting extends Component {
 
         this.drawClouds(canvas, ctx);
         this.drawSun(canvas, ctx);
-        //save and render our painting as an image
-        const savedBackground = new Image();
-        savedBackground.src = canvas.toDataURL('image/png');
-
     }
     
     drawSun(canvas, ctx) {
@@ -85,19 +84,18 @@ class Painting extends Component {
         ctx.arc(-8, -10, 100, 0, Math.PI * 2);
         ctx.shadowBlur = 55;
         ctx.fill();
-        ctx.closePath();
     }
 
     drawClouds(canvas, ctx) {
         //loop through drawing onto the canvas different rectangular clouds
         for (let i = 0; i < 35; i++) {
             const x = Math.random() * window.innerWidth;
-            const y = 15 + (Math.random() * 50);
+            const y = 15 + Math.floor((Math.random() * 50));
             //start a new drawing
             ctx.beginPath()
-            const height = Math.random() * 30;
+            const height = Math.floor(Math.random() * 30);
             //don't want the cloud to be taller than it's wide
-            const width = 30 + Math.random() * 70;
+            const width = 30 + Math.floor(Math.random() * 70);
             ctx.fillStyle = 'white';
             ctx.shadowBlur = 35;
             //elements which are closer to the sun (have a smaller x-coordinate) should a greaterOffset, i.e. light illuminating
@@ -108,7 +106,6 @@ class Painting extends Component {
             ctx.shadowColor = 'black';
             //draw the rectangle onto the canvas
             ctx.fillRect(x, y, width, height);
-            ctx.closePath();
         }
     }
 
@@ -121,7 +118,7 @@ class Painting extends Component {
     create() {
         return html`<div class="container">
             <canvas id="background"></canvas>
-            <button onclick=${() => this.redraw()}>Draw</button>
+            <button onclick=${this.redraw}>Draw</button>
         </div>`
     }
 }

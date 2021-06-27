@@ -1,4 +1,3 @@
-
 class FormData extends Atom {
     get type() {
         return FormData;
@@ -23,36 +22,19 @@ class FormItem extends Component {
     }
 
     create({first}){
-        return {tag: "div",
-        children: [
-          {tag: "input", 
-           attributes: {value: first},
-           events: {"input": this.handleFirstInput}
-          },
-          {tag: "p",
-           children: [
-               {tag: "TEXT_ELEMENT",
-                nodeValue: first}
-           ]},
-           {tag: "button",
-                children: [
-                    {
-                        tag: "TEXT_ELEMENT",
-                        nodeValue: "Remove!"
-                    }  
-                ],
-                events: {"click": this.removeElement}
-            }],
-            attributes: {style: "margin-bottom: 25px"}
-    }; 
+        return html`<div>
+            <input oninput=${this.handleFirstInput} />
+            <p>${first}</p>
+            <button onclick=${this.removeElement}>Remove</button>
+        </div>`
     }
 }
 
 class FormList extends ListOf(FormItem) {
     create(nodes) {
-        return {tag: "div",
-                children : nodes} 
-                   
+        return html`<div>
+            ${this.nodes}
+        </div>`
     }
 }
 
@@ -65,7 +47,7 @@ class Form extends Component {
         const test1 = new FormData({first: "hello"});
         const test2 = new FormData({first: "hi"});
         this.store = new FormDataStore([test1, test2]);
-        this.list = new FormList(this.store, data => this.store.remove(data));
+        this.list = new FormList(this.store);
         this.addRow = this.addRow.bind(this);
         this.bind(this.store);
     }
@@ -75,89 +57,31 @@ class Form extends Component {
     }
 
     create() {
-         return {tag: "div",
-                 children: [
-                    {tag: "h2",
-                    children: [
-                       {tag: "TEXT_ELEMENT",
-                        nodeValue: "Store"}
-                    ]},
-                    this.list.node,
-                    {tag: "button",
-                    children: [
-                        {
-                            tag: "TEXT_ELEMENT",
-                            nodeValue: "Add a row!"
-                        }  
-                    ],
-                    events: {"click": this.addRow}},
-                    {tag: "button",
-                     children: [
-                         {
-                             tag: "TEXT_ELEMENT",
-                             nodeValue: "Print store!"
-                         }
-                     ],
-                     events: {"click": () => console.log(this.store)}} 
-                 ]
-                }
+        return html`<div>
+            <h2>Store</h2>
+            ${this.list.node}
+            <button onclick=${this.addRow}>Add a row</button>
+        </div>`
     }
-
 }
 
 class App extends Component {
     init() {
-        this.router = new Router();
-        this.route = "";
-        this.router.on({
-            route: ["/home", "/about", "test"], 
-            handler: (route) => {
-                this.route = route;
-                this.render();
-            }}, 
-            {
-            route: "/:user",
-            handler: (route, params) => {
-                this.route = "user";
-                this.params = params;
-            }}
-        )
+        this.form = new Form();
     }
-
     
     debug() {
         console.log(this.node);
     }
 
-    clicked(evt) {
-        console.log(evt.target.value);
-    }
-
     create() {
-        console.log(window.location.href);
         return html`<div>
-            <p>Whoah</p>
-            ${() => {
-            switch (this.route) {
-                case "/home":
-                    return html`<div><h1 style="text-underline-position: center">Home</h1><a href="/about">about</a></div>`
-                case "/about":
-                    return html`<div><h1>About</h1><a href="/test">test</a></div>`
-                case "/test":
-                    return html`<div><h1>Test</h1><a href = "/home">home</a></div>`
-                case "user":
-                    return html`<h1>${this.params.user}</h1>`
-                default:
-                    return html`<button onclick=${(evt) => this.router.navigate("/home")}>Go home</button>`
-                }
-            }}
+            <h1>Hello world</h1>
+            ${this.form.node}
         </div>`
     }
 }
 
+
 const app = new App();
 document.body.appendChild(app.node);
-
-
-
-

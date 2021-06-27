@@ -285,12 +285,16 @@ class Component {
     //bind allows us to bind data to listen to and trigger an action when data changes. Similar to useState in React which 
     //triggers a re-render when data changes
     bind(source, handler) {
-        //if no handler passed in, we assume the callback is just a re-render of the UI because of a change in state
-        //handler passed in should be a JS callback that takes data and does something (data = new updated data)
-        if (handler === undefined) {
-            source.addHandler((data) => this.render(data));
+        if (source instanceof Listening) {
+            //if no handler passed in, we assume the callback is just a re-render of the UI because of a change in state
+            //handler passed in should be a JS callback that takes data and does something (data = new updated data)
+            if (handler === undefined) {
+                source.addHandler((data) => this.render(data));
+            } else {
+                source.addHandler(handler);
+            }
         } else {
-            source.addHandler(handler);
+            throw 'Attempting to bind to an unknown object!';
         }
     }
 
@@ -327,9 +331,10 @@ class Component {
         }
     }
 
-    //TODO: deal with this
+    //performs any cleanup before a component is removed such as invalidating timers, canceling network requests or cleaning any
+    //bindings that were made in the init
     remove() {
-        //take down any things necessary from the DOM
+        //remove handlers of any atomic data defined here
     }
 
     //create allows us to compose our unit of component
@@ -449,8 +454,15 @@ class List extends Component {
     }
      
     init(item, store, remove) {
+        if (!(store instanceof CollectionStore)) throw 'Error unknown data store provided, please use CollectionStore!'
         this.store = store;
-        this.remove = remove;
+        //check if no remove callback is passed in, in which case we default to using the native `remove` method
+        //provided by the store
+        if (remove) {
+            this.remove = remove;
+        } else {
+            this.remove = (data) => store.remove(data);
+        }
         //domElement is the unit of component that will render each individual element of a list 
         this.domElement = item;
         //backed by Javascript Map since maintains order and implements iterable interface, allowing easy manipulation when looping
@@ -494,8 +506,11 @@ class List extends Component {
     }
 
     create(data) {
-        //TODO: handle default implementation
-        return null;
+       //default implementation is to return a <ul> of all of the individal nodes, should be overrided if custom rendering
+       //needs to be specified
+       return html`<ul>
+           ${this.nodes}
+       </ul>` 
     }
 
     summarize() {
@@ -576,7 +591,8 @@ class CollectionStore extends Listening {
         this.data.delete(oldData);
         //call atom's remove to remove all subscribed event handlers
         oldData.remove();
-        //trigger any event handlers that are subscribed to the store for an update
+        //trigger any event handlers that are subscribed to the store for an update e.g. a re-render if the store was bound
+        //to a component
         this.fire();
 
     }

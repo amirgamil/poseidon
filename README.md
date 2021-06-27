@@ -22,7 +22,8 @@ Takes from Backbone's model-view flavor and Torus's approach with evented data s
 ### Patterns
 Things to keep in mind and take advantage of when building applications. Collection of patterns that will crop up frequently - can use to build very powerful apps.
 1. Using stores as the middle man between databases and rendering to the UI
-2. Binding data when initializing a component to trigger a re-render when it changes (similar to useState or hooks in React)
+2. Poseidon is *binding explicit*. In frameworks like React, a change in state will automatically trigger a re-render (the exact specifics of which can be controlled in `shouldComponentUpdate`). In Poseidon, we `bind` any data when we want a change to its state to trigger a callback function like a re-render.
+    - In components, this means we bind atomic data or data sources when initializing a component to trigger a re-render when it changes (similar to useState or hooks in React)
 3. Taking advantage of lists composed from custom data structures using an atom
     - Allows you to define the UI (i.e. the DOM element) for a single item once, and render it for a list of items
 4. Connecting lists with data sources to load their content from databases

@@ -34,8 +34,9 @@ a:hover{
 }
 
 button {
-    margin: -20px 10px 10px 10px;
+    margin: -35px 10px 0px 10px;
     text-decoration: none;
+    width: -moz-fit-content;
     width: fit-content;
     border: 0.1px solid grey;
     background: white;
@@ -43,7 +44,7 @@ button {
     font-family: 'Viaoda Libre', cursive;
     box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
     font-size: 1.5em;
-    position: absolute;
+    position: relative;
     bottom: 2.2em;
     transition: top ease 1s;
 }
