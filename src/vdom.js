@@ -224,7 +224,7 @@ const parseTag = (reader, values) => {
             reader.consume();
             specialChar = true;
             break;
-        }
+        } 
         //key on its own is still valid, so check if we need to map to a specific value
         if (reader.currentChar !== '=') {
             node.attributes[key] = true;

@@ -2,19 +2,27 @@ html, body, main {
     width: 100%;
     height:100%;
     margin: 0 auto;
-    background: rgb(0,0,3);
 }
 
 
 footer {
     bottom: 5px;
     width: 100%;
-    position: absolute;
+    bottom: 1em;
+    margin: 0;
+    padding: 0;
     text-align: center; 
 }
 
+main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 800px;
+}
+
 p, footer{
-    color:white ;
+    color: black;
 }
 
 p, a, footer{
@@ -22,43 +30,51 @@ p, a, footer{
     font-size: 20px;
 }
 
+.note {
+    display: flex;
+    justify-content: space-evenly;
+}
 
 a {
     text-decoration: none;
-    color: white;
-    color: rgb(249, 196, 194);
+    color: black;
 }
 
 a:hover{
     text-decoration: underline;
 }
 
-button {
+/* button {
     margin: -20px 10px 10px 10px;
     text-decoration: none;
     width: fit-content;
     border: 0.1px solid grey;
-    background: white;
-    color: black;
     font-family: 'Viaoda Libre', cursive;
     box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
     font-size: 1.5em;
-    position: absolute;
-    bottom: 2.2em;
     transition: top ease 1s;
 }
 
 button:hover {
-    bottom: 2.3em; 
     cursor: grab;
-    background:rgb(225,150,147);
-    color: white;
-}
+} */
 
-.container {
+.todoList {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
 }
 
+.todo {
+    display: flex;
+    width: 100%;
+    justify-content: space-evenly;
+    flex-wrap: 3;
+}
+
+.todoEntry {
+    display: flex;
+    justify-content: space-evenly;
+    margin-bottom: 2em;
+}
