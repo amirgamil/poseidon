@@ -15,7 +15,9 @@ const printDOMTree = (node, tabs = "") => {
 function updateDOMProperties(node, prevVNode, nextVNode) {
     //if this is a text node, update the text value
     if (prevVNode.tag == "TEXT_ELEMENT" && nextVNode.tag == "TEXT_ELEMENT") {
-        node.nodeValue = nextVNode.nodeValue;
+        //set the data attribute in our DOM node instead of nodeValue for speed and for better error detection
+        //(that we should not be setting this value for HTML tags that don't implement the CharacterData interface)
+        node.data = nextVNode.nodeValue;
     }
     //add/remove attributes, event listeners 
     //remove attributes
@@ -31,14 +33,25 @@ function updateDOMProperties(node, prevVNode, nextVNode) {
                     node.removeEventListener(key, prevVNode[key])
         });       
 
+
     //add attributes
     Object.keys(nextVNode.attributes || [])
-            .forEach((key, _) => {
+            .forEach((key, ) => {
                 const val = nextVNode.attributes[key];
-                //need to handle class differently 
-                key === 'class' ? node.className = val : node[key] = val;
+                //check if an ISL attribute was already mutated from DOM manipulation, in which case don't set it
+                //otherwise may produce unintended DOM side-effects (e.g. changing the value of selectionStart)
+                if (key && node[key] === val) {
+                    return;
+                }
+                //otherwise modify the attribute if it already exists and set element otherwise
+                if (key in node) {
+                    node[key] = val;
+                } else {
+                    console.log("check it: ", node);
+                    node.setAttribute(key, String(val));
+                }
+                
         });
-
     //add event listeners
     Object.keys(nextVNode.events || [])
             .forEach((key, _) => {
@@ -77,18 +90,6 @@ const DELETE = 2;
 const REPLACE= 3;
 const UPDATE = 4;
 
-// function performUnitOfWork(unitOfWork) {
-//     //do stuff
-
-//     return unit ;
-// }
-
-// function workLoop(nextUnitOfWork) {
-//     while (nextUnitOfWork) {
-//         nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
-//     }
-// }
-
 //queue to manage all updates to the DOM
 //List of {op: <OP>, details: {}}
 const updateQueue = [];
@@ -96,10 +97,9 @@ const updateQueue = [];
 //used to update DOM operations from the queue
 const performWork = () => {
     var node = null;
-    while (updateQueue.length > 0) {
+    for (let i = 0; i < updateQueue.length; i++) {
         //removes and returns item at index 0
-        //TODO: is there a more optimized way of doing this
-        const item = updateQueue.shift();
+        const item = updateQueue[i];
         switch (item.op) {
             case APPEND:
                 parent = item.details.parent;
@@ -128,8 +128,11 @@ const performWork = () => {
                 prev = item.details.prev;
                 newNode = item.details.new;
                 updateDOMProperties(dom, prev, newNode);
+                break;
         }
     }
+    //reset `updateQueue` now that we've dequeued everything (this will empty the queue)
+    updateQueue.length = 0;
     return node;
 }
 
@@ -138,6 +141,16 @@ const normalize = (vNode) => {
     if (!vNode) {
         return {tag: "", children: [], events: {}, attributes: {}};
     } 
+    if (!(vNode.children)) {
+        vNode.children = [];
+    }
+    if (!(vNode.events)) {
+        vNode.event = {};
+    }
+
+    if (!(vNode.attributes)) {
+        vNode.attributes = {};
+    }
     return vNode;
 }
  
@@ -165,7 +178,10 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
                 for (let i = 0; i < count; i++) {
                     newChild = newVNode.children[i];
                     prev = prevVNode.children[i]; 
-                    domChild = domChildren[i]; 
+                    //note there are two cases to consider here, either we have a child in our DOM tree (that is domChildren[i] is NOT
+                    //undefined) or we don't. If we won't have a DOM child, there are two subcases a) newVNode doesn't exist
+                    //or b) prevVnode doesn't exist.
+                    domChild = domChildren[i] || true; 
                     child = renderVDOM(newChild, prev, domChild);
                     //only append node if it's new
                     if (child && !prev) {
@@ -177,15 +193,16 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
         }
     } else if (newVNode.tag == "") {
         //node is no longer present so remove previous present virtual node
-        //note if the DOM node is undefined, then that node has already been handled i.e. removed or added in a previous iteration
-        if (nodeDOM) {
+        //note if the DOM node is true (line 179), then that node has already been handled i.e. removed or added in a previous iteration
+        if (nodeDOM !== true) {
             updateQueue.push({op: DELETE, details: {parent: nodeDOM.parentNode, node: nodeDOM}});
             //Note we want to to return here (i.e. not perform any work yet) to avoid removing DOM nodes before 
             //we have processed all of the children (to avoid indexing issues at line 168 causing us to skip nodes). This means we defer the 
             //`performWork` operation to be called by the parent. Note there is no scenario where we would encounter
             //an empty newVNode that reaches this block without being called by a parent.
             return node;
-        }
+        } 
+          
     } else if (prevVNode.tag == "") {
         //Double check: is this bit already implemented?
         //-----------
@@ -198,6 +215,7 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
             //return child, parent will handle the add to the queue
             return node;
         }
+        //otherwise adding a node to a currently empty DOM tree
         updateQueue.push({op: APPEND, details: {parent: null, node: node}}); 
         
     } else {
@@ -264,7 +282,6 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
     return res;
  }
 
- 
  //unit of UI
 class Component {
     constructor(...args) {
@@ -274,9 +291,13 @@ class Component {
         if (this.init !== undefined) {
             this.init(...args);
         }
-        //actual DOM node
+        //store object of {source, handler} to remove when taking down a component
+        //note, intentionally only store one source and handler for encapsulation
+        this.event = {};
         //`this.data` is a reserved property for passing into create to reduce side-effects and allow components to create UI without
-        //having to rely on getting the data from elsewhere (can define in it in init of a user-defined component)
+        //having to rely on getting the data from elsewhere (can define in it in `init` method of a user-defined component)
+        //call render if a component has not already been initialized with a fully-fledged, ready DOM node 
+        //(e.g. individual elements in a List)
         if (this.node === undefined) {
             this.render(this.data);
         }
@@ -289,9 +310,12 @@ class Component {
             //if no handler passed in, we assume the callback is just a re-render of the UI because of a change in state
             //handler passed in should be a JS callback that takes data and does something (data = new updated data)
             if (handler === undefined) {
-                source.addHandler((data) => this.render(data));
+                const defaultHandler = (data) => this.render(data);
+                source.addHandler(defaultHandler)
+                this.events = {source, defaultHandler};
             } else {
                 source.addHandler(handler);
+                this.events = {source, handler};
             }
         } else {
             throw 'Attempting to bind to an unknown object!';
@@ -308,6 +332,7 @@ class Component {
         //write own css parser
         const style = document.createElement('style');
         const userStyles = this.styles();
+        //call parse the content if we have custom-defined styles for efficiency
         if (userStyles) {
             var text = "";
             Object.keys(userStyles).forEach(selector => {
@@ -335,6 +360,10 @@ class Component {
     //bindings that were made in the init
     remove() {
         //remove handlers of any atomic data defined here
+        const {source, handler} = this.events;
+        source.remove();
+        //reset `this.events` 
+        this.events = {};
     }
 
     //create allows us to compose our unit of component
@@ -347,11 +376,13 @@ class Component {
     //converts internal representation of vDOM to DOM node 
     //used to render a component again if something changes - ONLY if necessary
     render(data) {
-        //not sure what to do with render yet
+        //create virtual DOM node
         const newVdom = this.create(data); 
+        //call the reconciliation algorithm to render diff the changes and render the new DOM tree which we save
         this.node = renderVDOM(newVdom, this.vdom, this.node);
+        //apply any user-defined styles if applicable
         this.addStyle();
-        this.vdom= newVdom;
+        this.vdom = newVdom;
         return this.node;
     }
 }
@@ -371,6 +402,7 @@ class Listening {
 
     //used to listen to and execute handlers on listening to events
     fire() {
+        console.log(this.handlers);
         this.handlers.forEach(handler => {
             //call handler with new state
             //since we pass in the state, this means we have access directly to an atom's data (aka state) in the handler
@@ -386,12 +418,12 @@ class Listening {
             this.removeHandler(handler)
         })
     }
-
+    //add a new handler
     addHandler(handler) {
        this.handlers.add(handler);
        handler(this.state);
     }
-
+    //remove a handler
     removeHandler(handler) {
         this.handlers.delete(handler);
     }
@@ -454,7 +486,7 @@ class List extends Component {
     }
      
     init(item, store, remove) {
-        if (!(store instanceof CollectionStore)) throw 'Error unknown data store provided, please use CollectionStore!'
+        if (!(store instanceof CollectionStore)) throw 'Error unknown data store provided, please use a CollectionStore!'
         this.store = store;
         //check if no remove callback is passed in, in which case we default to using the native `remove` method
         //provided by the store
@@ -476,11 +508,12 @@ class List extends Component {
 
     itemsChanged() {
         //loop over store and add new elements
-        //TODO: does this work correctly if you CHANGE existing elements - (check this)
         this.store.data.forEach((element) => {
             if (!this.items.has(element)) {
                 //pass in the atom to the new initialized component as well as the callback to remove an item from a store
                 //so that each component can remove its own atomic data
+                //recall that initializing a new element will call render the first time, meaning 
+                //we will be able to access the DOM node of this new element below
                 const domNode = new this.domElement(element, this.remove);
                 //note we pass the DOM nodes of the rendered component so that each defined component (i.e. domElement above) has 
                 //a reference to the actual DOM node being displayed on the web page. If we passed in a vDOM node, then 
@@ -513,11 +546,6 @@ class List extends Component {
        </ul>` 
     }
 
-    summarize() {
-        //TODO: deal with this
-        return
-    }
-
 }
 
 function ListOf(itemOf) {
@@ -532,7 +560,6 @@ function ListOf(itemOf) {
 //similar to Store in Torus and Collections in Backbone
 class CollectionStore extends Listening {
     constructor(data, atomClass) {
-        //TODO: fix super call
         super();
         this._atomClass = atomClass;
         this.setStore(data); 
@@ -543,14 +570,14 @@ class CollectionStore extends Listening {
     setStore(data) {
         //4 possible configurations for initalizing a store with data
         //1. Pass in objects with Atom
-        //2. Pass in intialized atoms as an array with no type (inferred)
+        //2. Pass in intialized atoms as an array with no type (we're responsible for inferring)
         //3. 1 but via CollectionStoreOf
         //4. 2 but via CollectionStoreOf
         if (data !== undefined && data !== null && data.length > 0) {
             //assume all data is the same type if no atom class is provided (meaning we can infer it directly, since just list of atoms) 
             if (this._atomClass === undefined) {
                 this.data = new Set(data);
-                //TODO: is there a better way of doing this?
+                //use the first element from the provided list as a heuristic for the type of atomic data of the data source
                 this._atomClass = data[0].type;
             } else {
                 if (data[0] instanceof Atom) {
@@ -600,7 +627,7 @@ class CollectionStore extends Listening {
     //return JSON serialized data sorted by comparator
     serialize() {
         //creates array with spread syntax, then sorts
-        //TODO: is there a more efficient way of doing this
+        //not cross-compatible with some older versions of browsers like IE11
         const sorted = [...this.data];
         sorted.sort((a , b) => {
             return a.comparator - b.comparator;
@@ -619,7 +646,7 @@ class CollectionStore extends Listening {
     }
 }
 
-//Higher order component pattern like in Torus
+//Higher order component pattern like in Torus for defining a CollectionStore of a specific record
 function CollectionStoreOf(classOf) {
     return class extends CollectionStore {
         constructor(data) {
@@ -693,6 +720,7 @@ class Router {
         }
     }
 
+    //navigate method provided for convenience in events like button actions
     navigate(path, {replace = false} = {}) {
         if (window.location.pathname != path) {
             if (replace) {
@@ -725,6 +753,7 @@ class Router {
 }
 
 const exposed = {
+    renderVDOM,
     Component,
     List,
     Atom,

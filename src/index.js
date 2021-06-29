@@ -15,6 +15,7 @@ const {
 } = require("./vdom.js");
 
 const exports = {
+    renderVDOM,
     Component,
     List,
     Atom,

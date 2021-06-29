@@ -48,12 +48,14 @@ class Form extends Component {
         const test2 = new FormData({first: "hi"});
         this.store = new FormDataStore([test1, test2]);
         this.list = new FormList(this.store);
+        console.log(this);
+        this.bind(this.store);        
+        console.log(this);
         this.addRow = this.addRow.bind(this);
-        this.bind(this.store);
     }
+
     addRow(evt) {
         this.store.add(new FormData({first: "new!"}));
-        console.log(this.store);
     }
 
     create() {
@@ -68,10 +70,6 @@ class Form extends Component {
 class App extends Component {
     init() {
         this.form = new Form();
-    }
-    
-    debug() {
-        console.log(this.node);
     }
 
     create() {

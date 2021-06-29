@@ -24,34 +24,38 @@ Things to keep in mind and take advantage of when building applications. Collect
 1. Using stores as the middle man between databases and rendering to the UI
 2. Poseidon is *binding explicit*. In frameworks like React, a change in state will automatically trigger a re-render (the exact specifics of which can be controlled in `shouldComponentUpdate`). In Poseidon, we `bind` any data when we want a change to its state to trigger a callback function like a re-render.
     - In components, this means we bind atomic data or data sources when initializing a component to trigger a re-render when it changes (similar to useState or hooks in React)
-3. Taking advantage of lists composed from custom data structures using an atom
+3. Binding data to components should be done as the last thing when initializing components
+    (why - binding calls handler first time, would change reference to this)
+4. Taking advantage of lists composed from custom data structures using an atom
     - Allows you to define the UI (i.e. the DOM element) for a single item once, and render it for a list of items
-4. Connecting lists with data sources to load their content from databases
-5. Self-managing components - state stored and acted on locally. Allows you to easily compose different components without 
+5. Connecting lists with data sources to load their content from databases
+6. Self-managing components - state stored and acted on locally. Allows you to easily compose different components without 
 central stores or state becoming too clunky and unmanageable (some common complaints with Redux for example)
     - This means when loading lists, each component element of the list has access to its atomic data and a callback to remove the data from the store
     - That way, the component is self-managing since data can be added or removed from itself
-6. Setting up data you want to access when rendering the UI by setting `this.data = ...` in the `init` of a component
-7. Pure components and container components 
+7. Setting up data you want to access when rendering the UI by setting `this.data = ...` in the `init` of a component
+8. Pure components and container components 
     - Container: interact directly with the store, have side-effects (e.g. List component)
     - Pure: mostly pure components, given same state will render the same UI
-8. If you're using a router, two common approaches
+9. If you're using a router, two common approaches
     - If you have different pages that correspond to different components, have a simple switch statement on the current route
     when composing the UI in `create` and return the node of the corresponding component accordingly
     - If the component is largely similar and you only want to "toggle" certain parts of the UI or off, conditionals or ternary expressions directly within `create` are more convenients like
     `${shouldLoad ? html`<h1>Unlocked!</h1>` : html`<h1>Locked :( </h1>`}`
     (if you want to map samle handler to different paths, do `['path1', 'path2'].forEach(path => router.on(path, handler)))`
-9. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
+10. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
+
+### Differences to Torus
+1. Urgonomics of bindings, inferred to be implicit if none provided
+2. Directly control data passed to the `create` call in the init of a component by setting `this.data` when initializing a component (in `init`), does not to be called elsewhere 
+3. Lists automatically sync changes from data source - don't need to bind a component to a data source but can provide 
+custom functionality with a handler if necessary
+4. Router kept separate from evented model, map route(s) directly to event handlers similar to `Express` or `gomux`
+
 
 ### Ideas to extend
-1. Make it more intuitive to connect data to stores to UI 
-    - Pass in JSON data and automatically map to atom list and store
-2. Higher order stores? 
-3. Data structure to concretely connect stores with lists? Model? Optional or enforced (i.e. expose Store and List like in Torus and give added functionality of Model or no?)
-4. Better support for interacting w. external sources like MongoDB, Airtable, etc. 
-5. Define more complex events with Listening - give tools to create more events which can be listened to (kind of like in Backbone)
-6. Key-based reconciliation?
-7. Did not like Torus's router, is there a more intuitivte way of doing it?
+1. Better support for interacting w. external sources like MongoDB, Airtable, etc. 
+2. Define more complex events with Listening - give tools to create more events which can be listened to (kind of like in Backbone)
 
 
 ### Goals

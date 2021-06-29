@@ -88,8 +88,12 @@ class App extends Component {
         //initalize a new list passing in our data store and a callback to remove an item
         //any collection source natively implements remove which we take advantage of here
         this.listTodos = new TodoList(this.dataSource, item => this.dataSource.remove(item));
-        //we bind our data source so whenever a change is made, the UI gets updated to reflect it
-        this.bind(this.dataSource);
+        //note using a list with a data source means the list is subscribed to all changes to the data source
+        //this means we could bind the component to a data source with a custom callback, however we don't need to
+        // this.bind(this.dataSource, () => {
+        //     custom code
+        //     this.render();
+        // });
     }
 
     handleInput(evt) {

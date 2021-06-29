@@ -97,13 +97,13 @@ class Painting extends Component {
             //don't want the cloud to be taller than it's wide
             const width = 30 + Math.floor(Math.random() * 70);
             ctx.fillStyle = 'white';
-            ctx.shadowBlur = 35;
             //elements which are closer to the sun (have a smaller x-coordinate) should a greaterOffset, i.e. light illuminating
             //the cloud should be brighter
             const howCloseToSun = ((window.innerWidth - x) / window.innerWidth)
             ctx.shadowOffsetY = howCloseToSun * 40;
             ctx.shadowOffsetX = howCloseToSun * 10; 
             ctx.shadowColor = 'black';
+            ctx.shadowBlur = 25;
             //draw the rectangle onto the canvas
             ctx.fillRect(x, y, width, height);
         }

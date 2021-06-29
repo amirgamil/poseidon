@@ -155,7 +155,6 @@ const parseJSExpr = (reader, values, attribute) => {
         //if this is a JSX expression associated with some key, return the value obtained directly instead of parsing it as a HTML node
         if (attribute) {
             reader.skipSpaces();
-            console.log(val);
             //if the val either a function or an object which was generated
             //by a nested vdom template literal, we return it directly
             //otherwise, we cast any other non-string primitives if the returned value is not already a string to prevent unnecessary computations
