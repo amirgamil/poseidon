@@ -68,6 +68,7 @@ test('render', t => {
     t.is(newNode.tagName.toLowerCase(), "div");
     //check it has not created a new div node, just updated properties
     t.is(newNode, node);
+    // console.log(node["class"]);
     t.is(newNode.getAttribute("class"), "coolerClass");
     t.is(newNode.getAttribute("id"), "superCoolID");
     t.is(newNode.getAttribute("style"), "display: flex;");
@@ -252,8 +253,6 @@ test('render', t => {
     initial = {tag: "input", attributes: {type: "button", "data-cool": "yes", "data-fire": "true"}}
     node = renderNext(initial);
     node["test"] = 1;
-    console.log(node.getAttribute("test"));
-    console.log(node, node.getAttribute("type"));
     t.is(node.getAttribute("data-cool"), "yes");
     t.is(node.getAttribute("data-fire"), "true");
 
@@ -272,10 +271,82 @@ test('render', t => {
     t.is(newNode.value, "hello world");
 })
 
-test('component', t => {
-    class NewComponent extends Component {
+test('childNodes', t => {
+    var initial = {tag: "div", children: [{tag: "span"}]}; 
+    var node = renderNext(initial);
+    t.is(node.childNodes[0].tagName.toLowerCase(), "span");
 
-    }
+    nextVDOM = {tag: "div", children: [{tag: "strong"}]}
+    var nextNode = renderVDOM(nextVDOM, initial, node);
+    t.is(nextNode, node);
+    t.is(nextNode.childNodes[0].tagName.toLowerCase(), "strong");
+    t.is(nextNode.childNodes.length, 1);
+
+    initial = {tag: "div", children: [{tag: "p", children: [{tag: "TEXT_ELEMENT", nodeValue: "first time"}]}]};
+    node = renderNext(initial);
+    nextVDOM = {tag: "div", children: [{tag: "p", children: [{tag: "TEXT_ELEMENT", nodeValue: "second time"}]}]};
+    nextNode = renderVDOM(nextVDOM, initial, node);
+
+    t.is(nextNode, node);
+    t.is(nextNode.childNodes[0].tagName.toLowerCase(), "p");
+    t.is(nextNode.childNodes[0].childNodes[0].nodeValue, "second time");
+    t.is(nextNode.childNodes[0].childNodes.length, 1);
+
+    //render text directly
+    node = renderNext(initial);
+    nextVDOM = {tag: "div", children: [{tag: "p", children: ["Test"]}]};
+    nextNode = renderVDOM(nextVDOM, initial, node);
+    t.is(nextNode.childNodes[0].childNodes[0].nodeValue, "Test");
+
+    node = renderNext(initial)    
+    nextVDOM = {tag: "div", children: ["Test"]};
+    nextNode = renderVDOM(nextVDOM, initial, node);
+    t.is(nextNode.childNodes[0].nodeValue, "Test"); 
+})
+
+
+test('event listeners', t => {
+    //adding an event listener
+    let clicked = false;
+    var initial = {tag: "button", events: {click: () => {clicked = true;}}};
+    var node = renderNext(initial);
+    node.click();
+    t.is(clicked, true);
+
+    //no event listener in re-render
+    clicked = false;
+    node = renderNext(initial);
+    var newVDOM = {tag: "button"}; 
+    var nextNode = renderVDOM(newVDOM, initial, node);
+    t.is(clicked, false);
+
+
+    //adding a different listener handler (should remove old listener)
+    clicked = "same";
+    node = renderNext(initial);
+    newVDOM = {tag: "button", events: {click: () => {clicked = "different";}}};
+    nextNode = renderVDOM(newVDOM, initial, node); 
+    nextNode.click();
+    t.is(clicked, "different");
+
+    //adding event listener that is not a function 
+    const notFunction = "yes";
+    clicked = false;
+    node = renderNext(initial);
+    newVDOM = {tag: "button", events: {click: notFunction}};
+    const fn = () => renderVDOM(newVDOM, initial, node);
+    //ensure this raises an error
+    const error = t.throws(() => {
+        fn();
+    }, {instanceOf: TypeError});
+    t.is(error.message, "Only undefined, null, an object, or a function are allowed for the callback parameter");
+})
+
+test('component', t => {
+    //test init called before render
+    // const c = new Component();
+    // console.log(c.node); 
+    t.is('', '');
 })
 
 

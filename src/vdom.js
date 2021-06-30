@@ -242,7 +242,7 @@ const parseTag = (reader, values) => {
             if (reader.getNextWord() === VDOM_PLACEHOLDER) value = parseJSExpr(reader, values, true);
             else throw "Error trying to parse the key-value pairs of a node, unexpected < found!"
             //skip closing tag
-            reader.consume();
+            reader.skipToNextChar();
         }
         //if the key starts with an on, this is an event, so we should save it accordingly
         if (key.startsWith("on")) {

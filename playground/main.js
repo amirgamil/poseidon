@@ -48,9 +48,6 @@ class Form extends Component {
         const test2 = new FormData({first: "hi"});
         this.store = new FormDataStore([test1, test2]);
         this.list = new FormList(this.store);
-        console.log(this);
-        this.bind(this.store);        
-        console.log(this);
         this.addRow = this.addRow.bind(this);
     }
 

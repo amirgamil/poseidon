@@ -27,35 +27,44 @@ function updateDOMProperties(node, prevVNode, nextVNode) {
         });
 
     //remove old event listeners 
-    Object.keys(prevVNode || [])
-                .filter(isEvent)
-                .forEach(key => {
-                    node.removeEventListener(key, prevVNode[key])
+    Object.keys(prevVNode.events || [])
+            .forEach((key, _) => {
+                //remove event listener and set the value of the associated key to null
+                node.removeEventListener(key, prevVNode.events[key]);
         });       
 
 
     //add attributes
-    Object.keys(nextVNode.attributes || [])
-            .forEach((key, ) => {
-                const val = nextVNode.attributes[key];
-                //check if an ISL attribute was already mutated from DOM manipulation, in which case don't set it
-                //otherwise may produce unintended DOM side-effects (e.g. changing the value of selectionStart)
-                if (key && node[key] === val) {
-                    return;
-                }
-                //otherwise modify the attribute if it already exists and set element otherwise
-                if (key in node) {
-                    node[key] = val;
-                } else {
-                    console.log("check it: ", node);
-                    node.setAttribute(key, String(val));
-                }
-                
-        });
+    var attributes = nextVNode.attributes || []
+    //helper method that sets an attribute 
+    const setAttributeHelper = (key, val) => {
+        //check if an ISL attribute was already mutated from DOM manipulation, in which case don't set it
+        //otherwise may produce unintended DOM side-effects (e.g. changing the value of selectionStart)
+        if (key && node[key] === val) {
+            return;
+        }
+        //otherwise modify the attribute if it already exists and set element otherwise
+        if (key in node) {
+            node[key] = val;
+        } else {
+            // node[key] = val;
+            node.setAttribute(key, val);
+        }
+    }
+    //note if nextVNode is a fully rendered DOM node, .attributes will return a named node map
+    //or we have a fully fledged DOM node where .attributes returns a NamedNodeMap
+    //check this is a vdom node before applying attributes
+    if (!(attributes.length) || attributes.length === 0) {
+        //this means nextVNode is a vdom node
+        Object.keys(attributes)
+                .forEach((key, ) => {
+                setAttributeHelper(key, nextVNode.attributes[key]); 
+            });
+    }
     //add event listeners
     Object.keys(nextVNode.events || [])
             .forEach((key, _) => {
-            node.addEventListener(key, nextVNode.events[key]);
+                node.addEventListener(key, nextVNode.events[key]);
         });
 }
  
@@ -104,7 +113,6 @@ const performWork = () => {
             case APPEND:
                 parent = item.details.parent;
                 child = item.details.node;
-                updateDOMProperties(child, normalize(null), item.details.node);
                 if (parent) {
                     parent.appendChild(child);
                 }
@@ -112,9 +120,8 @@ const performWork = () => {
             case REPLACE:
                 dom = item.details.dom
                 prev = item.details.previous;
+                //note calling instaniate also set DOM properties
                 next = instantiate(item.details.node);
-                //update properties
-                updateDOMProperties(dom, prev, next);
                 dom.replaceWith(next);
                 node = next;
                 break;
@@ -204,12 +211,7 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
         } 
           
     } else if (prevVNode.tag == "") {
-        //Double check: is this bit already implemented?
-        //-----------
-        //uses a similar heuristic to the React diffing algorithm
-        //if the nodes are dif create new node
-        //-----------
-        //create new node
+        //we have a new node that is currently not on in the DOM
         node = instantiate(newVNode);
         if (nodeDOM) {
             //return child, parent will handle the add to the queue
@@ -217,9 +219,10 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
         }
         //otherwise adding a node to a currently empty DOM tree
         updateQueue.push({op: APPEND, details: {parent: null, node: node}}); 
-        
     } else {
         //node has changed, so replace
+        //note we use a similar heuristic to the React diffing algorithm here - since the nodes are different
+        //we rebuild the entire tree at this node
         updateQueue.push({op: REPLACE, details: {dom: nodeDOM, previous: prevVNode, node: newVNode}});
     }
 
@@ -402,7 +405,6 @@ class Listening {
 
     //used to listen to and execute handlers on listening to events
     fire() {
-        console.log(this.handlers);
         this.handlers.forEach(handler => {
             //call handler with new state
             //since we pass in the state, this means we have access directly to an atom's data (aka state) in the handler
