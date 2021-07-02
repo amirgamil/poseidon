@@ -92,6 +92,31 @@ class Reader {
         }
         return this.string.substring(currIndex, finalIndex);
     }
+    //adapted helper method of above to keep moving pounter until the current word is the provided one
+    getUntilWord(word) {
+        var found = false;
+        //edge case where no spaces betwen '<--' and '-->
+        if (this.currentChar === '>') {
+            found = true;
+        }
+        while (!found && this.index < this.length) {
+            this.getUntilChar(word[0]);
+            //note getUntilChar does not consume the character we pass in, so we start comparing each character of the word
+            //at index 0
+            for (let i = 1; i < word.length; i++) {
+                this.consume();
+                // console.log("current: ", this.currentChar);
+                if (this.currentChar === word[i]) {
+                    found = true;
+                } else {
+                    //exit for loop and go back to the while loop
+                    found = false;
+                    break
+                }
+            }
+        }
+        this.skipToNextChar();
+    }
 
     //keep moving pointer forward until AFTER we encounter a char (i.e pointer now points to character after matching provided)
     skipPastChar(char) {
@@ -201,12 +226,18 @@ const parseTag = (reader, values) => {
     //skip < tag
     reader.consume();
     const name = reader.getNextWord();
-    //check if this is a placeholder for a JS expression
+    //check if this is a placeholder for a JS expression or if this is a comment node
     if (name === VDOM_PLACEHOLDER) {
         //skip < tag
         reader.consume();
         return parseJSExpr(reader, values, false);
-    }        
+    } else if (name.startsWith("!--")) {
+        //note we don't check for '<!--' because we consume it on line 202
+        //skip until '-->' tag
+        reader.getUntilWord('-->');
+        console.log(reader.currentChar);
+        return parseTag(reader, values);
+    } 
     const node = {
         tag: name,
         children: [], 
@@ -285,6 +316,7 @@ const html = (templates, ...values) => {
         return node;
     } catch (e) {
         console.error(e);
+        return null;
     }
 }
 

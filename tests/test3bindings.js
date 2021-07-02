@@ -90,4 +90,4 @@ const app = new App();
 document.body.appendChild(app.node)
 
 //TODO: add tests to enforce above is working
-//TODO: test binding stores and ensure
+//Test simple bindings and remove

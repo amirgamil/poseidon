@@ -328,25 +328,88 @@ test('event listeners', t => {
     nextNode = renderVDOM(newVDOM, initial, node); 
     nextNode.click();
     t.is(clicked, "different");
-
-    //adding event listener that is not a function 
-    const notFunction = "yes";
-    clicked = false;
-    node = renderNext(initial);
-    newVDOM = {tag: "button", events: {click: notFunction}};
-    const fn = () => renderVDOM(newVDOM, initial, node);
-    //ensure this raises an error
-    const error = t.throws(() => {
-        fn();
-    }, {instanceOf: TypeError});
-    t.is(error.message, "Only undefined, null, an object, or a function are allowed for the callback parameter");
 })
 
 test('component', t => {
     //test init called before render
-    // const c = new Component();
-    // console.log(c.node); 
-    t.is('', '');
+    let init = false;
+    var c = new (class extends Component {
+        init() {
+            t.is(init, false);
+        }
+
+        render() {
+            super.render();        
+            init = true;
+        }
+    });
+    t.is(init, true);
+
+
+    //test non-null DOM node
+    const n = new Component();
+    console.log(n.node);
+    t.assert(n.node !== null && n.node !== undefined);
+
+    //test valid vdom returned in create method
+    c = new (class extends Component {
+        create() {
+            return {tag: "h1", attributes: {"style": "color: Tomato;"}}
+        }
+    })
+    t.deepEqual(c.vdom, {tag: "h1", children: [], events: {}, attributes: {"style": "color: Tomato;"}})
+    t.deepEqual(c.node.tagName.toLowerCase(), "h1");
+    t.deepEqual(c.node.style.color, "Tomato");
+
+
+    //test calling this.render() calls this.create to return a new node
+    class Counter extends Component {
+        init() {
+            this.val = 0;
+            this.add = this.add.bind(this);
+        }
+
+        add() {
+            this.val += 1;
+            this.render();
+        }
+
+        create() {
+            return {tag: "p", children: [{tag: "TEXT_ELEMENT", nodeValue: this.val}]}; 
+        }
+    }
+
+    c = new Counter();
+    t.is(c.val, 0);
+    t.is(c.node.innerHTML, `0`);
+    c.add();
+    t.is(c.val, 1);
+    t.is(c.node.innerHTML, `1`);
+    c.add();
+    c.add();
+    t.is(c.val, 3);
+    t.is(c.node.innerHTML, `3`);
+
+    //test passing data into constructor is accessibile in init of a component
+    c = new (class extends Component {
+        init(data) {
+            t.is(data.name, "Joe");
+            t.is(data.age, 19);
+        }
+    })({name: "Joe", age: 19}); 
+
+
+    //testing setting `this.data` in init loads the data in create method
+    c = new (class extends Component {
+        init() {
+            this.data = {name: "Joe", age: 19}
+        }
+        
+        create({name, age}) {
+            t.is(name, "Joe");
+            t.is(age, 19);
+        }
+    })
 })
 
 

@@ -45,8 +45,11 @@ central stores or state becoming too clunky and unmanageable (some common compla
     (if you want to map samle handler to different paths, do `['path1', 'path2'].forEach(path => router.on(path, handler)))`
 10. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
 
+### Cool Features
+1. Component-specific styles, even if defined in general terms, will only affect those that exist in the current component!
+
 ### Differences to Torus
-1. Urgonomics of bindings, inferred to be implicit if none provided
+1. Urgonomics of bindings, inferred to be implicit if none provided. Similar idea with defining data sources, bindings and definitions.
 2. Directly control data passed to the `create` call in the init of a component by setting `this.data` when initializing a component (in `init`), does not to be called elsewhere 
     - Lends itself nicely to composition of components and some of the common patterns that come up in React 
 3. Lists automatically sync changes from data source - don't need to bind a component to a data source but can provide 

@@ -53,8 +53,9 @@ test('testHTMLElementParsing', t => {
     `
     const app = new App(testDiv);
     root.appendChild(app.node); 
-    t.is(root.innerHTML, `<div class="stuff" id="smt"><h1>Hello </h1>
-        <p>What's popping my fellow friend </p>
+    t.is(root.innerHTML, `<div class="stuff" id="smt"> 
+        <h1> Hello </h1>
+        <p> What's popping my fellow friend </p>
     </div>`);
 
     //div with list elements
@@ -69,7 +70,9 @@ test('testHTMLElementParsing', t => {
         </div>
     `
     app.render(testList);
-    t.is(root.innerHTML, `<div class="wrapper"><ul><li>Item 1</li>
+    t.is(root.innerHTML, `<div class="wrapper">
+            <ul>
+                <li>Item 1</li>
                 <li>Item 2</li>
                 <li>Item 3</li>
             </ul>
@@ -79,24 +82,29 @@ test('testHTMLElementParsing', t => {
     const selfClosing = html`
             <div>
                 <img src="../docs/gcd.png" />
-                <p> Hello is a break working </p>
+                <p>Hello is a break working </p>
                 <br/>
                 <input />
-                <p> Yes it's working</p>
+                <p>Yes it's working</p>
             </div>`;
     app.render(selfClosing);
-    t.is(root.innerHTML, `<div><img src="../docs/gcd.png"><p>Hello is a break working </p>
-                <br><input><p>Yes it's working</p>
+    t.is(root.innerHTML, `<div>
+                <img src="../docs/gcd.png">
+                <p>Hello is a break working </p>
+                <br>
+                <input>
+                <p>Yes it's working</p>
             </div>`)
     //more HTML tags, strong and a
     const strongAndA =  html`
-                <div>    
+                <div>
                     <p>This looks and feels like <strong>HTML and JSX</strong></p>
                     <a href = "https://google.com">Link</a>
                 </div>
                 `
     app.render(strongAndA);   
-    t.is(root.innerHTML, `<div><p>This looks and feels like <strong>HTML and JSX</strong></p>
+    t.is(root.innerHTML, `<div>
+                    <p>This looks and feels like <strong>HTML and JSX</strong></p>
                     <a href="https://google.com">Link</a>
                 </div>`);
 
@@ -108,18 +116,20 @@ test('testHTMLElementParsing', t => {
                     ${true ? html`<p>Hello</p>` : null}
                 </div>`;
     app.render(js1);
-    console.log(root.innerHTML);
-    t.is(root.innerHTML, `<div><p>true</p>
-                        <p>14</p>
-                        
-                        <p>Hello</p></div>`);
+    t.is(root.innerHTML, `<div>
+                    <p>true</p>
+                    <p>14</p>
+                    
+                    <p>Hello</p></div>`);
 
     //test jsx expression used as values to key and event handlers
     const js2 = html`<div>
                 <input placeholder = "test" val = ${true} oninput = ${(evt) => console.log(evt.target.value)}/>
             </div>`
     app.render(js2);
-    t.is(root.innerHTML, `<div><input placeholder="test"></div>`);
+    t.is(root.innerHTML, `<div>
+                <input placeholder="test" val="true">
+            </div>`);
 
     //test mapping an array into a list (common pattern that crops up)
     const js3 = html`<ul>
@@ -131,4 +141,22 @@ test('testHTMLElementParsing', t => {
     t.is(root.innerHTML, `<ul><li>a</li><li>b</li><li>c</li></ul>`);
 
     app.render(html`<p><a>Hello</a>      check it</p>`)
+    // check comments are not rendered
+    const js4 = html`<!--Hello-->`
+    t.is(js4, null);
+
+    //test comment with some special characters
+    const js5 = html`<div>
+        <!-- -> > -->
+        <!---->
+        <!-- Normal comment 
+        that spans multiple lines
+        -->
+        <p>Hello</p>
+    </div>`
+    app.render(js5);
+    t.is(root.innerHTML, `<div>
+        <p>Hello</p>
+    </div>`)
+    
 });

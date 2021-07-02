@@ -152,7 +152,7 @@ const normalize = (vNode) => {
         vNode.children = [];
     }
     if (!(vNode.events)) {
-        vNode.event = {};
+        vNode.events = {};
     }
 
     if (!(vNode.attributes)) {
@@ -166,6 +166,10 @@ const normalize = (vNode) => {
 //prevVNode: is old vDOM node that was previously rendered
 //nodeDOM: is the corresponding node in the DOM
 const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
+    //if have an empty node, return 
+    if(!newVNode && !prevVNode) {
+        return ;
+    }
     const sameType = prevVNode && newVNode && newVNode.tag === prevVNode.tag;
     prevVNode = normalize(prevVNode);
     newVNode = normalize(newVNode);
@@ -250,26 +254,20 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
  };
  
 
- //TODO: fix for proper-support of outer-level resolving to parent component
- function css(string) {
-    const componentStyles = string[0].replace("\n", "");
-    res = {}
-    //pass optional g flag to return all matches (not just the first one)
-    //will match < name { rule: value } > 
-    var regex = new RegExp('([\\s\\S]*?){([\\s\\S]*?)}', 'g');
-    var arr;
-    //loop while we're still matching
-    while (true) {
-        arr = regex.exec(componentStyles); 
-        if (!arr) {
-            break;
-        }
-        const selector = arr[1].trim();
-        if (!res[selector]) {
-            res[selector] = [];
-        }
+//TODO: fix for proper-support of outer-level resolving to parent component
+function css(string) {
+    var componentStyles = string[0].replace("\n", "");
+    const jsonCSSRules = {}
+    //add key for any outer-level defined css rules
+    jsonCSSRules[CONTAINER_CSS_COMPONENT] = []
+    //will match a set key-value rules for a specific selector < name { rule: value } > 
+    var regexSelector = new RegExp('([\\s\\S]*?){([\\s\\S]*?)}', 'g');
+    //matches any css media queries - TODO
+    var cssMediaQueryRegex = '((@media [\\s\\S]*?){([\\s\\S]*?}\\s*?)})';
+    //helper method to take a string of key-value pairs parse them into a dictionary 
+    const parseKeyValuePairs = (string, dict, selector) => {
         //body inside selector, split by semi-colons
-        const bodyNoNewLines = arr[2].replace(/(\r\n|\n|\r)/gm, "");
+        const bodyNoNewLines = string.replace(/(\r\n|\n|\r)/gm, "");
         const body = bodyNoNewLines.split(";");
         for (let rule of body) {
             //TODO: make more efficient
@@ -279,11 +277,41 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
             const formattedRule = rule.split(":");
             const styleRule = formattedRule[0].trim();
             const val = formattedRule[1].trim();
-            res[selector].push({[styleRule] : val}); 
+            dict[selector].push({[styleRule] : val}); 
         }
     }
-    return res;
+    var arr;
+    //loop while we're still matching
+    while (true) {
+        arr = regexSelector.exec(componentStyles); 
+        if (!arr) {
+            break;
+        }
+        const selector = arr[1].trim();
+        //if this key does not already exist in our JSON dictionary, add it
+        if (!jsonCSSRules[selector]) {
+            jsonCSSRules[selector] = [];
+        }
+        parseKeyValuePairs(arr[2], jsonCSSRules, selector);
+        //remove matched string
+        componentStyles = componentStyles.replace(arr[0], "");
+    }
+
+    //reached here, now are check for outer-level key-value styles if they exist
+    parseKeyValuePairs(componentStyles, jsonCSSRules, CONTAINER_CSS_COMPONENT);
+    console.log(jsonCSSRules);
+    return jsonCSSRules;
  }
+
+//pointer to global stylesheet to be used in subsequent reloads
+let globalStyleSheet;
+//maps components to class-names, used to check if styles for a component have already been delcared
+//e.g. when initializing different elements of a list
+const CSS_CACHE = new Map();
+//a unique string that will be used to map outer-level css rules inside a component (that don't have a user-defined selector)
+//when constructing the CSS JSON set of rules to the outer-level node in that component at render-time when adding the CSS rules
+//to the page
+const CONTAINER_CSS_COMPONENT = "<container" + new Date() + ">";
 
  //unit of UI
 class Component {
@@ -325,21 +353,47 @@ class Component {
         }
     }
 
-    //method for adding in-line css styling to components via css template literal, should be overrided in relevant component
-    styles() {
-        return null;
-    }
+    //method for adding inline css styling to components via css template literal, should be added in relevant component
+    //by returning a css template literal
+    // styles() {
+    //     return null;
+    // }
 
     //helper method for adding component-defined styles 
-    addStyle() {
-        //write own css parser
-        const style = document.createElement('style');
-        const userStyles = this.styles();
-        //call parse the content if we have custom-defined styles for efficiency
-        if (userStyles) {
+    addStyle(vdom) {
+        //call only proceeds if we have custom-defined styles for efficiency
+        //obleviates the need for having a separate Styled component - any component
+        //that does not implement styles() will not call any of this method's logic
+        //and any component can use the styles() API to apply CSS styles on its elements
+        if (!this.styles) return ;
+
+        //if we don't already have a reference to the globalStyleSheet, we need to create it and populate it with our
+        //css rules
+        if (!globalStyleSheet) {
+            //write own css parser
+            const style = document.createElement('style');
+            //in order to make sure the styles only get applied to elements in the current component 
+            //generate a unique class name - note we don't use a unique ID since we may want to use the same styles
+            //for dfferent instances of the same component e.g. different elements of a list
+            //first check if the class is not in our CSS_CACHE
+            if (!CSS_CACHE.has(this.constructor.name)) {
+                const uniqueID = this.constructor.name + new Date();
+                vdom.attributes["class"] += " " + uniqueID;
+                CSS_CACHE.set(this.constructor.name, uniqueID);
+            } else {
+                vdom.attributes["class"] += " " + CSS_CACHE.get(this.constructor.name);
+            }
+            console.log("check it! ", this.constructor.name);
+            const userStyles = this.styles();
             var text = "";
+            const containerClass = CSS_CACHE.get(this.constructor.name);
             Object.keys(userStyles).forEach(selector => {
-                text += selector + " { \n";
+                var cssSelector = selector;
+                //check if the selector corresponds to our unique identifier (indicating styles should be applied to 
+                //the top-level component)
+                if (selector === CONTAINER_CSS_COMPONENT) cssSelector = "";
+                //for a given selector, styles all descendants (included those nested deeply) of that selector inside the container class
+                text += containerClass + " " + cssSelector + " { \n";
                 userStyles[selector].forEach((item, _)=> {
                     const key = Object.keys(item);
                     const val = item[key];
@@ -347,6 +401,7 @@ class Component {
                 })
                 text += "}\n\n";
             });
+            console.log(text);
             //create style tag
             const cssNode = document.createElement('style');
             cssNode.type = 'text/css';
@@ -355,7 +410,10 @@ class Component {
             } else {
                 cssNode.appendChild(document.createTextNode(text));
             }
-            document.getElementsByTagName('head')[0].appendChild(cssNode);
+            //identify poseidon set of css rules with a unique data attribute
+            cssNode.setAttribute("data-poseidon", "true");
+            document.head.appendChild(cssNode);
+            globalStyleSheet = cssNode.sheet;
         }
     }
 
@@ -381,10 +439,13 @@ class Component {
     render(data) {
         //create virtual DOM node
         const newVdom = this.create(data); 
-        //call the reconciliation algorithm to render diff the changes and render the new DOM tree which we save
+        //apply any user-defined styles if applicable (do this before we render in case any user-generated styles
+        //need to add any properties to the outer vDOM node e.g. a unique id)
+        this.addStyle(newVdom);
+        //call the reconciliation algorithm to render/diff the changes and render the new DOM tree which we save
         this.node = renderVDOM(newVdom, this.vdom, this.node);
-        //apply any user-defined styles if applicable
-        this.addStyle();
+        //return an empty comment if no valid DOM node is returned
+        if (!this.node) this.node = document.createComment('');
         this.vdom = newVdom;
         return this.node;
     }
