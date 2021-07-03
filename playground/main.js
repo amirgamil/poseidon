@@ -69,6 +69,15 @@ class App extends Component {
         this.form = new Form();
     }
 
+    styles() {
+        return css`
+            background-color: yellow;
+            h1 {
+                background-color: green;
+            }
+        `
+    }
+
     create() {
         return html`<div>
             <h1>Hello world</h1>

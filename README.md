@@ -46,7 +46,7 @@ central stores or state becoming too clunky and unmanageable (some common compla
 10. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
 
 ### Cool Features
-1. Component-specific styles, even if defined in general terms, will only affect those that exist in the current component!
+1. Component-specific styles, even if defined in general terms, will only affect those that exist in the current component! (component-specific styles should always be at the top of the css template literal)
 
 ### Differences to Torus
 1. Urgonomics of bindings, inferred to be implicit if none provided. Similar idea with defining data sources, bindings and definitions.

@@ -8,13 +8,13 @@
 
 //Reader class to abstract lexing and scanning of a vdom template string
 class Reader {
-    constructor(string) {
+    constructor(string, specialCharacters) {
         //need to replace all backslashes with double backslash to make sure it's correctly rendered
         this.string = string;
         this.index = 0;
         this.length = string.length;
         //set of special characters to return when getNextWord is called
-        this.specialCharacters = new Set([' ', '=', '<', '>']);
+        this.specialCharacters = new Set(specialCharacters);
     }
 
     peek() {
@@ -200,7 +200,7 @@ const parseJSExpr = (reader, values, attribute) => {
 
         //notice this set-up nicely allows for nested vdom expressions (e.g. we can return another vdom template literal based on some
         //Javascript expression within another vdom)
-        const readerNewExpression = new Reader(val);
+        const readerNewExpression = new Reader(val, reader.specialCharacters);
         return parseTag(readerNewExpression, values); 
     } else {
         return null;
@@ -300,16 +300,26 @@ const VDOM_EXPRESSIONS = new RegExp('\${.*?}', 'g');
 const VDOM_PLACEHOLDER = `__vdomPlaceholder${Date.now()}`;
 //we wrap the placeholder in opening and closing tags to avoid checking extra edge cases in our parser which would introduce
 //extra, unneccessary computations
-const VDOM_JSX_NODE = "<" + VDOM_PLACEHOLDER + ">"
+const VDOM_JSX_NODE = '<' + VDOM_PLACEHOLDER + ">"
 //constant used when parsing children nodes to check whether we've finished parsing all child nodes and have found the closing parent
-const CLOSED_TAG = "</";
+const CLOSED_TAG = '</';
+//a unique string that will be used to map outer-level css rules inside a component (that don't have a user-defined selector)
+//when constructing the CSS JSON set of rules to the outer-level node in that component at render-time when adding the CSS rules
+//to the page
+const CSS_PLACEHOLDER = `__container${Date.now()}`;
+//note we wrap the placeholder with a {}, since this is a special character which will let the reader stop at the correct position 
+//and not overshoot 
+const CSS_JSX_NODE = '{' + CSS_PLACEHOLDER + '}';
+
+
+//check what to do with outer component for CSS
 
 //take advantage of Javascript template literals which gives us a string and a list of interpolated values
 const html = (templates, ...values) => {
     //create string and interpolate all of the ${} expressions with our constructed placeholder node 
     const vdomString = templates.join(VDOM_JSX_NODE, values);
     //HTML parsing
-    const reader = new Reader(vdomString);
+    const reader = new Reader(vdomString, [' ', '=', '<', '>']);
     try {
         reader.skipSpaces();
         const node = parseTag(reader, values);
@@ -320,12 +330,123 @@ const html = (templates, ...values) => {
     }
 }
 
+//parses body of the CSS and returns a dictionary of type {tag: `string`, rules: []} with arbitrary nesting of other 
+//css objects or {key: value} representing a CSS rule
+const parseCSStringToDict = (reader, dict, selector, values) => {
+    dict["tag"] = selector;
+    dict["rules"] = [];
+    while (reader.index < reader.length) {
+        var word = reader.getNextWord();
+        console.log(values);
+        //check if this is JS expression
+        if (word === '{') {
+            const placeholder = reader.getNextWord();
+            console.log("check it");
+            //found a JS expression which is a function call, likely to be a call to another css template literal
+            if (placeholder === CSS_PLACEHOLDER) {
+                const res = values.shift();
+                console.log(res);
+                dict["rules"].push(res);
+                reader.skipToNextChar();
+                continue
+            } else {
+                throw 'Invalid curly brace found in css template literal!'
+            }
+        }
+
+        //we don't directly use the reader's currentChar variable since there are some edge
+        //cases where we need to do some lookahead operations and will need to adjust it on the fly
+        //to execute the correct logic
+        var char = reader.currentChar;
+        // console.log(word, dict);
+
+        //may be a key-value pair or a selector, need to lookahead
+        if (reader.currentChar === ':') {
+            reader.skipToNextChar();
+            //some css selectors have `:` in them e.g :hover or ::before, so we need to check if this is a selector
+            //or a key-value pair
+            //first check if we have the complete word, or if this is a special :: selector case
+            if (reader.currentChar === ':' ) {
+                word += "::"; //directly add the ::s, first one at line 341 that we skipped, and the current one
+                //consume the second :
+                reader.consume(); 
+                word += reader.getNextWord();
+                reader.skipSpaces();
+                //this must be a css selector and not a key-value pair so reset char  
+                char = reader.currentChar
+            }
+            if (char !== '{') { 
+                var value = reader.getNextWord();
+                //check if we have a JS expression as the value for a key
+                if (value === '{') {
+                    //skip the {
+                    reader.consume();
+                    const constant = reader.getNextWord();
+                    if (constant !== CSS_PLACEHOLDER) throw 'Invalid JS expression while trying to parse the value of a key!';
+                    value = values.shift();
+                    //skip past the } of the 
+                    reader.skipPastChar();
+                } 
+                //check if this is a css selector with a specific colon like :before, in which case the reader would be 
+                //pointing to a {
+                if (reader.currentChar === '{') {
+                    word += ":" + value;
+                    char = reader.currentChar; //adjust char to a { so we correctly parse it as a selector at line 366
+                } else {
+                    //otherwise, we've encountered a key-value pair
+                    dict.rules.push({key: word, value: value});
+                    //consume ; at the end of a rule and skip any spaces
+                    reader.skipToNextChar();
+                }
+            }         
+        } 
+        if (char === '{') {
+            reader.skipToNextChar();
+            //nested tag, recursive call here
+            const nestedTagDict = {};
+            dict.rules.push(nestedTagDict);
+            //note for the new selector, we append the current selector (i.e. child) to the parent
+            //to capture all descedants of the parent that correspond to this specific child
+            //this prevents us from having to do this logic ad-hoc when we parse our dict into
+            //our eventual stylesheet
+            parseCSStringToDict(reader, nestedTagDict, selector + " " + word, values);
+            //skip closing } and any spaces
+            reader.skipToNextChar();
+            console.log(reader.currentChar);
+        }
+        //check if we've reached the end of a block-scoped {} of key-value pairs
+        if (reader.currentChar === '}') {
+            //note we don't consume the '}' since we delegate the responsibility to the caller to do that
+            //allows us to more reliably manage our position / prevents inconsistencies with multiple nested tags on the same level 
+            break;
+        }
+    }
+    return dict;
+}
+
+const css = (templates, ...values) => {
+    //create string and interpolate all of the ${} expressions with our constructed placeholder node 
+    const vdomString = templates.join(CSS_JSX_NODE, values);
+    //HTML parsing
+    const reader = new Reader(vdomString, [';', '{', '}', ':']);
+    try {
+        reader.skipSpaces();
+        const dict = {};
+        //TODO: change "" to some constant which can be recognized and replaced 
+        parseCSStringToDict(reader, dict, "", values);
+        return dict;
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
 
 //expose reader initially for debugging and testing purposes
 //named exposedV so different from poseidon since for now have two script tags for the playground
 const exposedV = {
     html,
     parseTag,
-    Reader
+    Reader,
+    css
 }
 module.exports = exposedV;

@@ -253,65 +253,68 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
      attributes: {}
  };
  
-
-//TODO: fix for proper-support of outer-level resolving to parent component
 function css(string) {
-    var componentStyles = string[0].replace("\n", "");
-    const jsonCSSRules = {}
-    //add key for any outer-level defined css rules
-    jsonCSSRules[CONTAINER_CSS_COMPONENT] = []
-    //will match a set key-value rules for a specific selector < name { rule: value } > 
-    var regexSelector = new RegExp('([\\s\\S]*?){([\\s\\S]*?)}', 'g');
-    //matches any css media queries - TODO
-    var cssMediaQueryRegex = '((@media [\\s\\S]*?){([\\s\\S]*?}\\s*?)})';
-    //helper method to take a string of key-value pairs parse them into a dictionary 
-    const parseKeyValuePairs = (string, dict, selector) => {
-        //body inside selector, split by semi-colons
-        const bodyNoNewLines = string.replace(/(\r\n|\n|\r)/gm, "");
-        const body = bodyNoNewLines.split(";");
-        for (let rule of body) {
-            //TODO: make more efficient
-            if (!(rule.trim())) {
-                continue;
-            }
-            const formattedRule = rule.split(":");
-            const styleRule = formattedRule[0].trim();
-            const val = formattedRule[1].trim();
-            dict[selector].push({[styleRule] : val}); 
-        }
-    }
-    var arr;
-    //loop while we're still matching
-    while (true) {
-        arr = regexSelector.exec(componentStyles); 
-        if (!arr) {
-            break;
-        }
-        const selector = arr[1].trim();
-        //if this key does not already exist in our JSON dictionary, add it
-        if (!jsonCSSRules[selector]) {
-            jsonCSSRules[selector] = [];
-        }
-        parseKeyValuePairs(arr[2], jsonCSSRules, selector);
-        //remove matched string
-        componentStyles = componentStyles.replace(arr[0], "");
-    }
+    
+}
+// //TODO: fix for proper-support of outer-level resolving to parent component
+// function css(string) {
+//     var componentStyles = string[0].replace("\n", "");
+//     const jsonCSSRules = {}
+//     //add key for any outer-level defined css rules
+//     jsonCSSRules[CONTAINER_CSS_COMPONENT] = []
+//     //will match a set key-value rules for a specific selector < name { rule: value } > 
+//     var regexSelector = new RegExp('([\\s\\S]*?){([\\s\\S]*?)}', 'g');
+//     //matches any css media queries - TODO
+//     var cssMediaQueryRegex = '((@media [\\s\\S]*?){([\\s\\S]*?}\\s*?)})';
+//     //helper method to take a string of key-value pairs parse them into a dictionary 
+//     const parseKeyValuePairs = (string, dict, selector) => {
+//         //body inside selector, split by semi-colons
+//         const bodyNoNewLines = string.replace(/(\r\n|\n|\r)/gm, "");
+//         const body = bodyNoNewLines.split(";");
+//         for (let rule of body) {
+//             //TODO: make more efficient, chec
+//             if (!(rule.trim())) {
+//                 continue;
+//             }
+//             const formattedRule = rule.split(":");
+//             const styleRule = formattedRule[0].trim();
+//             const val = formattedRule[1].trim();
+//             dict[selector].push({[styleRule] : val}); 
+//         }
+//     }
+//     var arr;
+//     //loop while we're still matching
+//     while (true) {
+//         arr = regexSelector.exec(componentStyles); 
+//         if (!arr) {
+//             break;
+//         }
+//         console.log(arr);
+//         //TODO: check for nesting and make a recursive call
+//         console.log("loop, check it: ", arr[1]); 
+//         console.log(arr, arr[1])
+//         const selector = arr[1].trim();
+//         console.log(selector);
+//         //if this key does not already exist in our JSON dictionary, add it
+//         if (!jsonCSSRules[selector]) {
+//             jsonCSSRules[selector] = [];
+//         }
+//         parseKeyValuePairs(arr[2], jsonCSSRules, selector);
+//         //remove matched string
+//         componentStyles = componentStyles.replace(arr[0], "");
+//     }
 
-    //reached here, now are check for outer-level key-value styles if they exist
-    parseKeyValuePairs(componentStyles, jsonCSSRules, CONTAINER_CSS_COMPONENT);
-    console.log(jsonCSSRules);
-    return jsonCSSRules;
- }
+//     //reached here, now are check for outer-level key-value styles if they exist
+//     parseKeyValuePairs(componentStyles, jsonCSSRules, CONTAINER_CSS_COMPONENT);
+//     console.log(jsonCSSRules);
+//     return jsonCSSRules;
+//  }
 
 //pointer to global stylesheet to be used in subsequent reloads
 let globalStyleSheet;
 //maps components to class-names, used to check if styles for a component have already been delcared
 //e.g. when initializing different elements of a list
 const CSS_CACHE = new Map();
-//a unique string that will be used to map outer-level css rules inside a component (that don't have a user-defined selector)
-//when constructing the CSS JSON set of rules to the outer-level node in that component at render-time when adding the CSS rules
-//to the page
-const CONTAINER_CSS_COMPONENT = "<container" + new Date() + ">";
 
  //unit of UI
 class Component {
@@ -377,7 +380,7 @@ class Component {
             //for dfferent instances of the same component e.g. different elements of a list
             //first check if the class is not in our CSS_CACHE
             if (!CSS_CACHE.has(this.constructor.name)) {
-                const uniqueID = this.constructor.name + new Date();
+                const uniqueID = this.constructor.name //+ new Date();
                 vdom.attributes["class"] += " " + uniqueID;
                 CSS_CACHE.set(this.constructor.name, uniqueID);
             } else {
@@ -388,6 +391,7 @@ class Component {
             var text = "";
             const containerClass = CSS_CACHE.get(this.constructor.name);
             Object.keys(userStyles).forEach(selector => {
+                console.log("key: ", selector);
                 var cssSelector = selector;
                 //check if the selector corresponds to our unique identifier (indicating styles should be applied to 
                 //the top-level component)

@@ -5,7 +5,6 @@ const {
     ListOf,
     CollectionStore, 
     CollectionStoreOf,
-    css
 } = require("../src/poseidon.js");
 
 const {
@@ -17,13 +16,7 @@ class App extends Component {
     init(res) {
         this.data = res;
     }
-    styles() {
-        return css`
-        .stuff {
-            margin: 0;
-        }
-        `
-    }
+
     create(res) {
         return res; 
     }
