@@ -74,13 +74,32 @@ class App extends Component {
             background-color: yellow;
             h1 {
                 background-color: green;
+                font-size: 35px;
+                animation: test infinite 1s;
             }
+
+            button:hover {
+                background-color: blue;
+            }
+
+            @keyframes test {
+                0% {
+                    background-color: green;
+                }
+
+                50% {
+                    background-color: blue;
+                }
+            }
+
         `
     }
 
     create() {
         return html`<div>
             <h1>Hello world</h1>
+            <button>Hover</button>
+            <a href = "/">To nowhere</a>
             ${this.form.node}
         </div>`
     }

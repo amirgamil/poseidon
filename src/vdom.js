@@ -25,15 +25,18 @@ class Reader {
     }
 
     //gets the next word, keeps moving forward until until it encounters one of the special tags or a closing '/>'
-    getNextWord() {
+    //takes a positional parameter that by default will only return values inside of quotes as opposed to
+    //the entire string with quotes. Can pass true to get the entire string with quotes to override this
+    //behavior
+    getNextWord(includeQuotes = false) {
         var currIndex = this.index;
         var finalIndex = currIndex;
         var quoteCount = 0;
         //keep looping while we don't encounter a special character of if we're inside a quote
-        while ((this.index < this.length) && (!this.specialCharacters.has(this.currentChar) || quoteCount === 1)) {
+        while ((this.index < this.length) && (!this.specialCharacters.has(this.currentChar) || (!includeQuotes && quoteCount === 1))) {
             //if we have quotes, skip them
             //TODO: add more robust type checking we have the same type of quote
-            if (this.currentChar === '"' || this.currentChar === "'") {
+            if (!includeQuotes && (this.currentChar === '"' || this.currentChar === "'")) {
                 //adjust starting point of returned work if we encounter an opening quote
                 if (quoteCount === 0) { 
                     quoteCount += 1;
@@ -105,7 +108,6 @@ class Reader {
             //at index 0
             for (let i = 1; i < word.length; i++) {
                 this.consume();
-                // console.log("current: ", this.currentChar);
                 if (this.currentChar === word[i]) {
                     found = true;
                 } else {
@@ -235,7 +237,6 @@ const parseTag = (reader, values) => {
         //note we don't check for '<!--' because we consume it on line 202
         //skip until '-->' tag
         reader.getUntilWord('-->');
-        console.log(reader.currentChar);
         return parseTag(reader, values);
     } 
     const node = {
@@ -286,7 +287,7 @@ const parseTag = (reader, values) => {
     }
     //skip closing > of node definition and any spaces/new lines
     reader.consume();
-    //match actual body of the node
+    //match actual body of the node if this is not a self-closing HTML tag like <img />
     if (!specialChar) node.children = parseChildren(name, reader, values);
     //return JSON-formatted vdom node
     return node;
@@ -337,16 +338,29 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
     dict["rules"] = [];
     while (reader.index < reader.length) {
         var word = reader.getNextWord();
-        console.log(values);
         //check if this is JS expression
         if (word === '{') {
+            //consume the { token
+            reader.consume();
             const placeholder = reader.getNextWord();
-            console.log("check it");
             //found a JS expression which is a function call, likely to be a call to another css template literal
             if (placeholder === CSS_PLACEHOLDER) {
                 const res = values.shift();
-                console.log(res);
-                dict["rules"].push(res);
+                //if the value returned from a function call is none, don't add it to the rest of the styles
+                if (res) {
+                    //since this is a nested call to the css function, we need to "unwrap it" because a call from css
+                    //wraps the outer JSON in an object corresponding to the current component we are in. 
+                    //In this case we are already nesting styles in
+                    //the component wrapper so we can get rid of it
+                    res["rules"].forEach((objectStyles, _) => {
+                        //need to append the current selector to any nested rules
+                        //note we remove `<container> from the result of the nested css template function
+                        //call to prevent duplicates in our selector
+                        objectStyles["tag"] = selector + objectStyles["tag"].replace("<container> ", "");
+                        //add the styles
+                        dict["rules"].push(objectStyles);    
+                    });
+                } 
                 reader.skipToNextChar();
                 continue
             } else {
@@ -358,7 +372,6 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
         //cases where we need to do some lookahead operations and will need to adjust it on the fly
         //to execute the correct logic
         var char = reader.currentChar;
-        // console.log(word, dict);
 
         //may be a key-value pair or a selector, need to lookahead
         if (reader.currentChar === ':') {
@@ -376,7 +389,9 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
                 char = reader.currentChar
             }
             if (char !== '{') { 
-                var value = reader.getNextWord();
+                //make sure to get the result with quotes in case any values rely on it 
+                //to correctly render CSS e.g. content
+                var value = reader.getNextWord(true);
                 //check if we have a JS expression as the value for a key
                 if (value === '{') {
                     //skip the {
@@ -385,7 +400,7 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
                     if (constant !== CSS_PLACEHOLDER) throw 'Invalid JS expression while trying to parse the value of a key!';
                     value = values.shift();
                     //skip past the } of the 
-                    reader.skipPastChar();
+                    reader.skipToNextChar();
                 } 
                 //check if this is a css selector with a specific colon like :before, in which case the reader would be 
                 //pointing to a {
@@ -400,19 +415,25 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
                 }
             }         
         } 
+        //this is a selector with some associated css rules i.e. <name> {key1: rule1....}
         if (char === '{') {
             reader.skipToNextChar();
             //nested tag, recursive call here
             const nestedTagDict = {};
             dict.rules.push(nestedTagDict);
+            var newSelector = selector + " " + word;
+            //if the tag is a keyframe or media, we don't want to append the previous selector
+            //since these are special tags which should be handled differently
+            if (word.includes("@keyframes") || word.includes("@media")) {
+                newSelector = word;
+            }
             //note for the new selector, we append the current selector (i.e. child) to the parent
-            //to capture all descedants of the parent that correspond to this specific child
-            //this prevents us from having to do this logic ad-hoc when we parse our dict into
+            //to capture all descedants of the parent that correspond to this specific child.
+            //This prevents us from having to do this logic ad-hoc when we parse our dict into
             //our eventual stylesheet
-            parseCSStringToDict(reader, nestedTagDict, selector + " " + word, values);
+            parseCSStringToDict(reader, nestedTagDict, newSelector, values);
             //skip closing } and any spaces
             reader.skipToNextChar();
-            console.log(reader.currentChar);
         }
         //check if we've reached the end of a block-scoped {} of key-value pairs
         if (reader.currentChar === '}') {
@@ -427,13 +448,12 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
 const css = (templates, ...values) => {
     //create string and interpolate all of the ${} expressions with our constructed placeholder node 
     const vdomString = templates.join(CSS_JSX_NODE, values);
-    //HTML parsing
     const reader = new Reader(vdomString, [';', '{', '}', ':']);
     try {
         reader.skipSpaces();
         const dict = {};
         //TODO: change "" to some constant which can be recognized and replaced 
-        parseCSStringToDict(reader, dict, "", values);
+        parseCSStringToDict(reader, dict, "<container>", values);
         return dict;
     } catch (e) {
         console.error(e);

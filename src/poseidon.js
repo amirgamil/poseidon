@@ -213,7 +213,7 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
             //an empty newVNode that reaches this block without being called by a parent.
             return node;
         } 
-          
+    
     } else if (prevVNode.tag == "") {
         //we have a new node that is currently not on in the DOM
         node = instantiate(newVNode);
@@ -253,68 +253,67 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
      attributes: {}
  };
  
-function css(string) {
-    
-}
-// //TODO: fix for proper-support of outer-level resolving to parent component
-// function css(string) {
-//     var componentStyles = string[0].replace("\n", "");
-//     const jsonCSSRules = {}
-//     //add key for any outer-level defined css rules
-//     jsonCSSRules[CONTAINER_CSS_COMPONENT] = []
-//     //will match a set key-value rules for a specific selector < name { rule: value } > 
-//     var regexSelector = new RegExp('([\\s\\S]*?){([\\s\\S]*?)}', 'g');
-//     //matches any css media queries - TODO
-//     var cssMediaQueryRegex = '((@media [\\s\\S]*?){([\\s\\S]*?}\\s*?)})';
-//     //helper method to take a string of key-value pairs parse them into a dictionary 
-//     const parseKeyValuePairs = (string, dict, selector) => {
-//         //body inside selector, split by semi-colons
-//         const bodyNoNewLines = string.replace(/(\r\n|\n|\r)/gm, "");
-//         const body = bodyNoNewLines.split(";");
-//         for (let rule of body) {
-//             //TODO: make more efficient, chec
-//             if (!(rule.trim())) {
-//                 continue;
-//             }
-//             const formattedRule = rule.split(":");
-//             const styleRule = formattedRule[0].trim();
-//             const val = formattedRule[1].trim();
-//             dict[selector].push({[styleRule] : val}); 
-//         }
-//     }
-//     var arr;
-//     //loop while we're still matching
-//     while (true) {
-//         arr = regexSelector.exec(componentStyles); 
-//         if (!arr) {
-//             break;
-//         }
-//         console.log(arr);
-//         //TODO: check for nesting and make a recursive call
-//         console.log("loop, check it: ", arr[1]); 
-//         console.log(arr, arr[1])
-//         const selector = arr[1].trim();
-//         console.log(selector);
-//         //if this key does not already exist in our JSON dictionary, add it
-//         if (!jsonCSSRules[selector]) {
-//             jsonCSSRules[selector] = [];
-//         }
-//         parseKeyValuePairs(arr[2], jsonCSSRules, selector);
-//         //remove matched string
-//         componentStyles = componentStyles.replace(arr[0], "");
-//     }
-
-//     //reached here, now are check for outer-level key-value styles if they exist
-//     parseKeyValuePairs(componentStyles, jsonCSSRules, CONTAINER_CSS_COMPONENT);
-//     console.log(jsonCSSRules);
-//     return jsonCSSRules;
-//  }
 
 //pointer to global stylesheet to be used in subsequent reloads
 let globalStyleSheet;
 //maps components to class-names, used to check if styles for a component have already been delcared
 //e.g. when initializing different elements of a list
 const CSS_CACHE = new Map();
+
+//helper method user to convert the JSON object the `css` template literal returns into
+//a set of styles - this function is recursive and resolves nested JSON CSS objects 
+//the logic may seem confusing but we need to wrap a list of nested JSON CSS objects
+//and array of CSS rules into a flat structure that resolves the selectors
+//To do this, we distinguish between the rules for a given nested selector and nested objects.
+//We add rules for a given selector at the end once we've guaranteed there are no more 
+//nested JSON objects to parse
+const parseCSSJSON = (JSONCSS, containerHash) => {
+    const {tag, rules} = JSONCSS;
+    //represents the overall text of our CSS
+    var text = "";
+    var cssTag;
+    //boolean variable to mark whether we need to handle the text differently when appending to the
+    //stylesheet
+    var specialTag = false;
+    //if this is a special tag that contains @keyframes or media, we need to remove
+    //the inner references to the container component nesting
+    if (tag.includes("@keyframes") || tag.includes("@media")) {
+        specialTag = true;
+        cssTag = tag;
+    } else {
+        //replace references to the container component which was unknown as time of generating 
+        //the CSS set of JSON rules
+        cssTag = tag.replace("<container>", containerHash);
+    }
+    //represents the set of rules for the current selector at this level of our tree  
+    var textForCurrentSelector = cssTag + " { \n";
+    console.log(JSONCSS);
+    rules.forEach((item, _) => {
+        //check if this is a rule or a nested CSS JSON object
+        if (item.key) {
+            const {key, value} = item;
+            textForCurrentSelector += "\t" + key + ":" + value + ";\n";
+        } else {
+            //then this is a nested JSON tag so we need to recurse
+            const selectorText = parseCSSJSON(item, containerHash) + "\n\n";
+            text += selectorText
+        }
+    });
+    //add the rules for the current level now that we've finished parsing all of the nested rules
+    text += textForCurrentSelector + "}\n\n"; 
+    return text;
+}
+
+
+
+const generateUniqueHash = (string) => {
+    var hashedString = string;
+    // Math.random should be unique because of its seeding algorithm.
+    // Convert it to base 36 (numbers + letters), and grab the first 9 characters
+    // after the decimal.
+    hashedString += Math.random().toString(36).substr(2, 9);
+    return hashedString;
+}
 
  //unit of UI
 class Component {
@@ -373,43 +372,34 @@ class Component {
         //if we don't already have a reference to the globalStyleSheet, we need to create it and populate it with our
         //css rules
         if (!globalStyleSheet) {
+            console.log("first time loading stylesheet");
             //write own css parser
             const style = document.createElement('style');
+            //check if we have a class attribute, otherwise, create one
+            if (!vdom.attributes["class"]) {
+                vdom.attributes["class"] = "";
+            }
             //in order to make sure the styles only get applied to elements in the current component 
             //generate a unique class name - note we don't use a unique ID since we may want to use the same styles
             //for dfferent instances of the same component e.g. different elements of a list
             //first check if the class is not in our CSS_CACHE
             if (!CSS_CACHE.has(this.constructor.name)) {
-                const uniqueID = this.constructor.name //+ new Date();
+                const uniqueID = generateUniqueHash(this.constructor.name); 
                 vdom.attributes["class"] += " " + uniqueID;
                 CSS_CACHE.set(this.constructor.name, uniqueID);
             } else {
                 vdom.attributes["class"] += " " + CSS_CACHE.get(this.constructor.name);
             }
-            console.log("check it! ", this.constructor.name);
-            const userStyles = this.styles();
-            var text = "";
-            const containerClass = CSS_CACHE.get(this.constructor.name);
-            Object.keys(userStyles).forEach(selector => {
-                console.log("key: ", selector);
-                var cssSelector = selector;
-                //check if the selector corresponds to our unique identifier (indicating styles should be applied to 
-                //the top-level component)
-                if (selector === CONTAINER_CSS_COMPONENT) cssSelector = "";
-                //for a given selector, styles all descendants (included those nested deeply) of that selector inside the container class
-                text += containerClass + " " + cssSelector + " { \n";
-                userStyles[selector].forEach((item, _)=> {
-                    const key = Object.keys(item);
-                    const val = item[key];
-                    text += key + ":" + val + ";\n";
-                })
-                text += "}\n\n";
-            });
-            console.log(text);
+            //get the JSON object of CSS rules
+            const userJSONStyles = this.styles();
+            const containerHash = CSS_CACHE.get(this.constructor.name);
+            //add . before class for the css stylesheet
+            const text = parseCSSJSON(userJSONStyles, "." + containerHash);
+            // console.log(text);
             //create style tag
             const cssNode = document.createElement('style');
             cssNode.type = 'text/css';
-            if (css.styleSheet) {
+            if (cssNode.styleSheet) {
                 cssNode.styleSheet.cssText = text;
             } else {
                 cssNode.appendChild(document.createTextNode(text));
@@ -827,8 +817,7 @@ const exposed = {
     ListOf,
     CollectionStore,
     CollectionStoreOf,
-    Router,
-    css
+    Router
 }
 
 if (typeof window === 'object') {
