@@ -338,6 +338,9 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
     dict["rules"] = [];
     while (reader.index < reader.length) {
         var word = reader.getNextWord();
+        //to prevent an infinite loop and fail gracefully, check if the word is a special character
+        //which we don't check later on
+        if (word === ';' || word === '}') throw 'Error, unexpected end of expression found!';    
         //check if this is JS expression
         if (word === '{') {
             //consume the { token
@@ -346,7 +349,7 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
             //found a JS expression which is a function call, likely to be a call to another css template literal
             if (placeholder === CSS_PLACEHOLDER) {
                 const res = values.shift();
-                //if the value returned from a function call is none, don't add it to the rest of the styles
+                //if the value returned from a function call is null, ignore it
                 if (res) {
                     //since this is a nested call to the css function, we need to "unwrap it" because a call from css
                     //wraps the outer JSON in an object corresponding to the current component we are in. 
@@ -356,7 +359,7 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
                         //need to append the current selector to any nested rules
                         //note we remove `<container> from the result of the nested css template function
                         //call to prevent duplicates in our selector
-                        objectStyles["tag"] = selector + objectStyles["tag"].replace("<container> ", "");
+                        objectStyles["tag"] = selector + objectStyles["tag"].replace("<container>", "");
                         //add the styles
                         dict["rules"].push(objectStyles);    
                     });
@@ -366,7 +369,7 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
             } else {
                 throw 'Invalid curly brace found in css template literal!'
             }
-        }
+        } 
 
         //we don't directly use the reader's currentChar variable since there are some edge
         //cases where we need to do some lookahead operations and will need to adjust it on the fly
@@ -407,6 +410,13 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
                 if (reader.currentChar === '{') {
                     word += ":" + value;
                     char = reader.currentChar; //adjust char to a { so we correctly parse it as a selector at line 366
+                } else if (reader.currentChar === ':') {
+                   //this is a media rule or a css selector with two colons e.g. @media and (min-width: 800px) and (max-width: 800px)
+                    reader.consume();
+                    const next = reader.getNextWord();
+                    //trim for consistency
+                    word += ":" + value  + ":" + next.trimStart();
+                    char = reader.currentChar;
                 } else {
                     //otherwise, we've encountered a key-value pair
                     dict.rules.push({key: word, value: value});
@@ -421,12 +431,14 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
             //nested tag, recursive call here
             const nestedTagDict = {};
             dict.rules.push(nestedTagDict);
+            //TODO: standarize spacing, necessary?
             var newSelector = selector + " " + word;
-            //if the tag is a keyframe or media, we don't want to append the previous selector
+            //if the tag, or next selector is a keyframe or media, we don't want to append the previous selector
             //since these are special tags which should be handled differently
-            if (word.includes("@keyframes") || word.includes("@media")) {
+            if (word.includes("@keyframes") || word.includes("@media") || 
+                dict["tag"].includes("@keyframes") || dict["tag"].includes("@media")) {
                 newSelector = word;
-            }
+            } 
             //note for the new selector, we append the current selector (i.e. child) to the parent
             //to capture all descedants of the parent that correspond to this specific child.
             //This prevents us from having to do this logic ad-hoc when we parse our dict into
@@ -447,12 +459,14 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
 
 const css = (templates, ...values) => {
     //create string and interpolate all of the ${} expressions with our constructed placeholder node 
-    const vdomString = templates.join(CSS_JSX_NODE, values);
-    const reader = new Reader(vdomString, [';', '{', '}', ':']);
+    const cssString= templates.join(CSS_JSX_NODE, values);
+    //remove any comments
+    const cssCommentsRegex = new RegExp('(\\/\\*[\\s\\S]*?\\*\\/)', 'gi');
+    const cssWithoutComments = cssString.replace(cssCommentsRegex, '');
+    const reader = new Reader(cssWithoutComments, [';', '{', '}', ':']);
     try {
         reader.skipSpaces();
         const dict = {};
-        //TODO: change "" to some constant which can be recognized and replaced 
         parseCSStringToDict(reader, dict, "<container>", values);
         return dict;
     } catch (e) {

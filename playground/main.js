@@ -70,8 +70,8 @@ class App extends Component {
     }
 
     styles() {
+        const val = true;
         return css`
-            background-color: yellow;
             h1 {
                 background-color: green;
                 font-size: 35px;
@@ -92,6 +92,15 @@ class App extends Component {
                 }
             }
 
+            @media only screen and (max-device-width: 600px) {
+                body {
+                    background-color: green;
+                }
+            }               
+            /* this is a comment */
+            ${val ? css`p {
+                background-color: green;
+            }` : null}
         `
     }
 
@@ -99,6 +108,7 @@ class App extends Component {
         return html`<div>
             <h1>Hello world</h1>
             <button>Hover</button>
+            <p> ️😀 </p>
             <a href = "/">To nowhere</a>
             ${this.form.node}
         </div>`

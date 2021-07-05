@@ -280,14 +280,18 @@ const parseCSSJSON = (JSONCSS, containerHash) => {
     if (tag.includes("@keyframes") || tag.includes("@media")) {
         specialTag = true;
         cssTag = tag;
+        text += tag + "{\n\n"
     } else {
         //replace references to the container component which was unknown as time of generating 
         //the CSS set of JSON rules
         cssTag = tag.replace("<container>", containerHash);
     }
+    var textForCurrentSelector = "";
     //represents the set of rules for the current selector at this level of our tree  
-    var textForCurrentSelector = cssTag + " { \n";
-    console.log(JSONCSS);
+    if (!specialTag) {
+        //only add rules at the current level, if this is not a special tag
+        textForCurrentSelector = cssTag + " { \n";
+    }
     rules.forEach((item, _) => {
         //check if this is a rule or a nested CSS JSON object
         if (item.key) {
