@@ -41,12 +41,13 @@ central stores or state becoming too clunky and unmanageable (some common compla
     - If you have different pages that correspond to different components, have a simple switch statement on the current route
     when composing the UI in `create` and return the node of the corresponding component accordingly
     - If the component is largely similar and you only want to "toggle" certain parts of the UI or off, conditionals or ternary expressions directly within `create` are more convenients like
-    `${shouldLoad ? html`<h1>Unlocked!</h1>` : html`<h1>Locked :( </h1>`}`
+    ```${shouldLoad ? html`<h1>Unlocked!</h1>` : html`<h1>Locked :( </h1>`}```
     (if you want to map samle handler to different paths, do `['path1', 'path2'].forEach(path => router.on(path, handler)))`
 10. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
 
 ### Cool Features
 1. Component-specific styles, even if defined in general terms, will only affect those that exist in the current component! (component-specific styles should always be at the top of the css template literal)
+    - Supports arbitrary nesting, pseudoelements, pseudoselectors, media/keyframes, and conditional rendering based on ternary conditions or state!
 
 ### Differences to Torus
 1. Urgonomics of bindings, inferred to be implicit if none provided. Similar idea with defining data sources, bindings and definitions.

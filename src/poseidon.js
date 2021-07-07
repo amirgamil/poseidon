@@ -259,7 +259,8 @@ let globalStyleSheet;
 //maps components to class-names, used to check if styles for a component have already been delcared
 //e.g. when initializing different elements of a list
 const CSS_CACHE = new Map();
-
+//global rule index to insert CSS rules sequentially
+var ruleIndex = 0;
 //helper method user to convert the JSON object the `css` template literal returns into
 //a set of styles - this function is recursive and resolves nested JSON CSS objects 
 //the logic may seem confusing but we need to wrap a list of nested JSON CSS objects
@@ -267,14 +268,14 @@ const CSS_CACHE = new Map();
 //To do this, we distinguish between the rules for a given nested selector and nested objects.
 //We add rules for a given selector at the end once we've guaranteed there are no more 
 //nested JSON objects to parse
-const parseCSSJSON = (JSONCSS, containerHash) => {
+const parseCSSJSON = (JSONCSS, containerHash, styleRules, specialTag = false) => {
     const {tag, rules} = JSONCSS;
     //represents the overall text of our CSS
     var text = "";
     var cssTag;
     //boolean variable to mark whether we need to handle the text differently when appending to the
     //stylesheet
-    var specialTag = false;
+    var specialTag = specialTag;
     //if this is a special tag that contains @keyframes or media, we need to remove
     //the inner references to the container component nesting
     if (tag.includes("@keyframes") || tag.includes("@media")) {
@@ -288,9 +289,9 @@ const parseCSSJSON = (JSONCSS, containerHash) => {
     }
     var textForCurrentSelector = "";
     //represents the set of rules for the current selector at this level of our tree  
+    //only add rules at the current level, if this is not a special tag
+    textForCurrentSelector = cssTag + " { \n";
     if (!specialTag) {
-        //only add rules at the current level, if this is not a special tag
-        textForCurrentSelector = cssTag + " { \n";
     }
     rules.forEach((item, _) => {
         //check if this is a rule or a nested CSS JSON object
@@ -299,17 +300,35 @@ const parseCSSJSON = (JSONCSS, containerHash) => {
             textForCurrentSelector += "\t" + key + ":" + value + ";\n";
         } else {
             //then this is a nested JSON tag so we need to recurse
-            const selectorText = parseCSSJSON(item, containerHash) + "\n\n";
-            text += selectorText
+            text += parseCSSJSON(item, containerHash, styleRules, specialTag);
+            
         }
     });
-    //add the rules for the current level now that we've finished parsing all of the nested rules
-    text += textForCurrentSelector + "}\n\n"; 
-    return text;
+    if (specialTag && !text) {
+        return textForCurrentSelector + "}";
+    }
+    //if text is not empty, we are adding a special rule like @media or @keyframes
+    if (text) {
+        styleRules.push(text + "}");
+    } else {
+        //add the rules for the current level now that we've finished parsing all of the nested rules
+        styleRules.push(textForCurrentSelector + "}");
+    }
+    return "";
 }
 
-
-
+const initStyleSheet = (userJSONStyles, name, rules) => {
+    const containerHash = CSS_CACHE.get(name);
+    //create style tag
+    const cssNode = document.createElement('style');
+    cssNode.type = 'text/css';
+    //identify poseidon set of css rules with a unique data attribute
+    cssNode.setAttribute("data-poseidon", "true");
+    document.head.appendChild(cssNode);
+    globalStyleSheet = cssNode.sheet;
+    //add . before class for the css stylesheet
+    parseCSSJSON(userJSONStyles, "." + containerHash, rules);
+}
 const generateUniqueHash = (string) => {
     var hashedString = string;
     // Math.random should be unique because of its seeding algorithm.
@@ -319,7 +338,14 @@ const generateUniqueHash = (string) => {
     return hashedString;
 }
 
- //unit of UI
+const injectStyles = (rules) => {
+    //add the rules to our stylesheet
+    for (const rule of rules) {
+        globalStyleSheet.insertRule(rule);
+    }
+}
+
+//unit of UI
 class Component {
     constructor(...args) {
         //initialize stuff
@@ -373,46 +399,42 @@ class Component {
         //and any component can use the styles() API to apply CSS styles on its elements
         if (!this.styles) return ;
 
+        //check if we have a class attribute, otherwise, create one
+        if (!vdom.attributes["class"]) {
+            vdom.attributes["class"] = "";
+        }
+        //in order to make sure the styles only get applied to elements in the current component 
+        //generate a unique class name - note we don't use a unique ID since we may want to use the same styles
+        //for dfferent instances of the same component e.g. different elements of a list
+        //first check if the class is not in our CSS_CACHE
+        if (!CSS_CACHE.has(this.constructor.name)) {
+            const uniqueID = generateUniqueHash(this.constructor.name); 
+            vdom.attributes["class"] += " " + uniqueID;
+            CSS_CACHE.set(this.constructor.name, uniqueID);
+        } else {
+            vdom.attributes["class"] += " " + CSS_CACHE.get(this.constructor.name);
+        }
+        
+        console.log(userJSONStyles);
         //if we don't already have a reference to the globalStyleSheet, we need to create it and populate it with our
         //css rules
         if (!globalStyleSheet) {
-            console.log("first time loading stylesheet");
-            //write own css parser
-            const style = document.createElement('style');
-            //check if we have a class attribute, otherwise, create one
-            if (!vdom.attributes["class"]) {
-                vdom.attributes["class"] = "";
-            }
-            //in order to make sure the styles only get applied to elements in the current component 
-            //generate a unique class name - note we don't use a unique ID since we may want to use the same styles
-            //for dfferent instances of the same component e.g. different elements of a list
-            //first check if the class is not in our CSS_CACHE
-            if (!CSS_CACHE.has(this.constructor.name)) {
-                const uniqueID = generateUniqueHash(this.constructor.name); 
-                vdom.attributes["class"] += " " + uniqueID;
-                CSS_CACHE.set(this.constructor.name, uniqueID);
-            } else {
-                vdom.attributes["class"] += " " + CSS_CACHE.get(this.constructor.name);
-            }
-            //get the JSON object of CSS rules
-            const userJSONStyles = this.styles();
-            const containerHash = CSS_CACHE.get(this.constructor.name);
-            //add . before class for the css stylesheet
-            const text = parseCSSJSON(userJSONStyles, "." + containerHash);
-            // console.log(text);
-            //create style tag
-            const cssNode = document.createElement('style');
-            cssNode.type = 'text/css';
-            if (cssNode.styleSheet) {
-                cssNode.styleSheet.cssText = text;
-            } else {
-                cssNode.appendChild(document.createTextNode(text));
-            }
-            //identify poseidon set of css rules with a unique data attribute
-            cssNode.setAttribute("data-poseidon", "true");
-            document.head.appendChild(cssNode);
-            globalStyleSheet = cssNode.sheet;
-        }
+            this.regenerateStyleSheet();
+        } 
+        //note by design we don't check if state has changed and re-generate/re-inject all of the styles
+        //Poseidon's API
+    }
+
+    //generates a new stylesheet and injects all of the styles into the page. This operation is expensive
+    //and should be called infrequently - only if state required to load css changes. As with Poseidon's API
+    //any state should be bound to this method to automatically trigger a re-injection when the styles change
+    regenerateStyleSheet() {
+        const rules = [];
+        const name = this.constructor.name;
+        //get the JSON object of CSS rules
+        const userJSONStyles = this.styles();
+        initStyleSheet(userJSONStyles, name, rules);
+        injectStyles(rules);
     }
 
     //performs any cleanup before a component is removed such as invalidating timers, canceling network requests or cleaning any
@@ -437,6 +459,7 @@ class Component {
     render(data) {
         //create virtual DOM node
         const newVdom = this.create(data); 
+        //TODO: fix this, can't use insertRule if element is not already in the DOM
         //apply any user-defined styles if applicable (do this before we render in case any user-generated styles
         //need to add any properties to the outer vDOM node e.g. a unique id)
         this.addStyle(newVdom);

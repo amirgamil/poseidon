@@ -67,10 +67,12 @@ class Form extends Component {
 class App extends Component {
     init() {
         this.form = new Form();
+        this.reload = this.reload.bind(this);
+        this.val = true;
     }
 
     styles() {
-        const val = true;
+        const val = this.val;
         return css`
             h1 {
                 background-color: green;
@@ -104,10 +106,15 @@ class App extends Component {
         `
     }
 
+    reload() {
+        this.val = false;
+        this.render();
+    }
+
     create() {
         return html`<div>
             <h1>Hello world</h1>
-            <button>Hover</button>
+            <button onclick=${this.reload}>Hover</button>
             <p> ️😀 </p>
             <a href = "/">To nowhere</a>
             ${this.form.node}

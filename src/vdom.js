@@ -340,7 +340,10 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
         var word = reader.getNextWord();
         //to prevent an infinite loop and fail gracefully, check if the word is a special character
         //which we don't check later on
-        if (word === ';' || word === '}') throw 'Error, unexpected end of expression found!';    
+        if (word === ';') { 
+            console.log(reader.string.substring(reader.index));
+            throw 'Error, unexpected end of expression found!';    
+        }
         //check if this is JS expression
         if (word === '{') {
             //consume the { token

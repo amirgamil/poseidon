@@ -173,6 +173,7 @@ test('displayButton', t => {
     var element = document.querySelector(".marker");
     var styles = window.getComputedStyle(element);
     //save styles of the outer div which will be used in a later test
+    const prevStyleSheet = document.styleSheets[0];
     const stylesOuter = styles;
     t.is(styles.display, "initial");
     t.is(styles["font-weight"], "10px");
@@ -195,9 +196,8 @@ test('displayButton', t => {
 
 
     //test re-render uses the same reloaded stylesheets if possible
-    // c.render();
-    // element = document.querySelector(".marker");
-    // styles = window.getComputedStyle(element);
-    // t.is(stylesOuter, styles);
+    c.render();
+    const sheetAfterRender = document.styleSheets[0];
+    t.deepEqual(prevStyleSheet, sheetAfterRender);
     
 });
