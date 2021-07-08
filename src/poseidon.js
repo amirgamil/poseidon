@@ -415,7 +415,6 @@ class Component {
             vdom.attributes["class"] += " " + CSS_CACHE.get(this.constructor.name);
         }
         
-        console.log(userJSONStyles);
         //if we don't already have a reference to the globalStyleSheet, we need to create it and populate it with our
         //css rules
         if (!globalStyleSheet) {

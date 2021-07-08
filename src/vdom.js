@@ -1,11 +1,5 @@
 //jsx like parser written in Javascript for Poseidon's vdom
 
-//TODO:
-//Interpolate all template literals with string values and store them in a map
-//Then build node out, when a string is encountered, go retrieve that value as the tree is being constructed
-//makes the algorithm more efficient since only one traversal is done
-
-
 //Reader class to abstract lexing and scanning of a vdom template string
 class Reader {
     constructor(string, specialCharacters) {
@@ -275,6 +269,11 @@ const parseTag = (reader, values) => {
             else throw "Error trying to parse the key-value pairs of a node, unexpected < found!"
             //skip closing tag
             reader.skipToNextChar();
+        } else {
+            //replace any template literals inside the string value if they exist with their corresponding values
+            while (value.includes(VDOM_JSX_NODE)) {
+                value = value.replace(VDOM_JSX_NODE, parseJSExpr(reader, values, true) );
+            }
         }
         //if the key starts with an on, this is an event, so we should save it accordingly
         if (key.startsWith("on")) {
