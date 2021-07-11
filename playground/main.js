@@ -22,6 +22,7 @@ class FormItem extends Component {
     }
 
     create({first}){
+        console.log(first);
         return html`<div>
             <input oninput=${this.handleFirstInput} />
             <p>${first}</p>
@@ -108,6 +109,7 @@ class App extends Component {
 
     reload() {
         this.val = false;
+        console.log("cheeky");
         this.render();
     }
 

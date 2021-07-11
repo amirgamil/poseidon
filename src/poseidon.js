@@ -455,7 +455,16 @@ class Component {
 
     //converts internal representation of vDOM to DOM node 
     //used to render a component again if something changes - ONLY if necessary
-    render(data) {
+    render(dataIn) {
+        var data = dataIn;
+        if (this.data !== undefined) {
+            //if we had set this.data when initializing a component, it should also
+            //load the data in a manual call to render
+            data = this.data;
+        }
+        if (data instanceof Atom) {
+            data = data.state;
+        }         
         //create virtual DOM node
         const newVdom = this.create(data); 
         //TODO: fix this, can't use insertRule if element is not already in the DOM
@@ -562,13 +571,15 @@ class Atom extends Listening {
 //Lists are backed by collection data stores (middle man between database and the UI) to map collections to the UI
 class List extends Component {
     //fix constructor with args
-    constructor(item, store, remove) {
+    constructor(item, store, remove, ...args) {
         //call super method
-        super(item, store, remove);
+        super(...args);
+        this.initList(item, store, remove);
         this._atomClass = store.atomClass;
     }
-     
-    init(item, store, remove) {
+
+    //helper method which initializes the list nodes 
+    initList(item, store, remove) {
         if (!(store instanceof CollectionStore)) throw 'Error unknown data store provided, please use a CollectionStore!'
         this.store = store;
         //check if no remove callback is passed in, in which case we default to using the native `remove` method
@@ -588,7 +599,7 @@ class List extends Component {
         //will initialize map on first call of itemsChanged() -> binding calls handler the first time
         this.bind(store, () => this.itemsChanged());
     }
-
+    
     itemsChanged() {
         //loop over store and add new elements
         this.store.data.forEach((element) => {
@@ -685,7 +696,7 @@ class CollectionStore extends Listening {
                 this._atomClass = newData.type;
             }
         } else {
-            if (!this.__atomClass) throw "Error, adding a non-atom object without a defined atom class!"
+            if (!this._atomClass) throw "Error, adding a non-atom object without a defined atom class!"
             this.data.add(new thiss.__atomClass(newData));
         } 
         //trigger any event handlers that are subscribed to the store for an update
@@ -832,7 +843,6 @@ class Router {
         //route the current url
         this.match(window.location.pathname);
     } 
-
 }
 
 const exposed = {
