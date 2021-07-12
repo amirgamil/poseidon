@@ -201,6 +201,14 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
                 }
             }
             node = nodeDOM;
+            //if we are only updating the value of two text nodes, defer doing the `performWork` operation
+            //until the caller finishes. This reduces unwanted side effects when we are diffing deep nested 
+            //trees since we don't change the DOM until we've finished looking at all levels of the tree
+            //as opposed to altering the DOM one level deep into the tree when we haven't yet looked at 
+            //the other levels 
+            if (prevVNode.tag === "TEXT_ELEMENT" && newVNode.tag === "TEXT_ELEMENT") {
+                return node;
+            }
         }
     } else if (newVNode.tag == "") {
         //node is no longer present so remove previous present virtual node
@@ -215,7 +223,7 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
         } 
     
     } else if (prevVNode.tag == "") {
-        //we have a new node that is currently not on in the DOM
+        //we have a new node that is currently not in the DOM
         node = instantiate(newVNode);
         if (nodeDOM) {
             //return child, parent will handle the add to the queue
@@ -457,7 +465,8 @@ class Component {
     //used to render a component again if something changes - ONLY if necessary
     render(dataIn) {
         var data = dataIn;
-        if (this.data !== undefined) {
+        //only apply render with `this.data` if no parameters passed in, which should take precedence
+        if (this.data !== undefined && !data) {
             //if we had set this.data when initializing a component, it should also
             //load the data in a manual call to render
             data = this.data;
@@ -683,6 +692,8 @@ class CollectionStore extends Listening {
         } else {
             this.data = new Set();
         } 
+        //should emit an event for any handlers to act on
+        this.fire();
     }
 
     summarize() {
@@ -697,7 +708,7 @@ class CollectionStore extends Listening {
             }
         } else {
             if (!this._atomClass) throw "Error, adding a non-atom object without a defined atom class!"
-            this.data.add(new thiss.__atomClass(newData));
+            this.data.add(new this._atomClass(newData));
         } 
         //trigger any event handlers that are subscribed to the store for an update
         this.fire();
@@ -779,6 +790,8 @@ class Router {
     //in that order
     constructor() {
         this.routes = new Map();        
+        //set the pathname of the current route
+        this.currentPath = window.location.pathname;
         this.options = {
             context: window,
             startListening: true
@@ -788,6 +801,10 @@ class Router {
         }
         //used to detect when URL changes and execute a handler accordingly
         window.addEventListener('popstate', this.matchHelper); 
+    }
+
+    get currentRoute() {
+        return this.currentPath;
     }
 
     //route-matching algorithm
