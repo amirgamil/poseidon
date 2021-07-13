@@ -833,6 +833,9 @@ class Router {
                 //split parameters using the ?varName=varVal 
                 this.currentPath = path;
                 handler(route, routeParams);
+                //we don't want to execute more than route once we've matched one
+                //if it can match multiple ones so we break
+                break
             }
 
         }

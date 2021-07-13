@@ -192,8 +192,19 @@ const parseJSExpr = (reader, values, attribute) => {
             } else {
                 return val;
             }
-        } else if (typeof val !== 'string') val = String(val); 
-
+        } else if (typeof val !== 'string') {
+            val = String(val)
+        } 
+        //To prevent executing any HTML from Javascript variables which would expose
+        //a risk of cross-scriping attacks, if there's any HTML content in our string, we throw an error
+        //and stop execution.
+        //Note we only need to check if a string starts with < because if the string starts with any other text
+        //then `parseTag` will assume it's a text token and consume characters until it finds an opening < until which it stops
+        //This means a string like `test<script>alert("hello")</script>` would not cause any issues because the recursive call
+        //would stop as soon as it hits the opening < of the script tag, effectively ignoring any other HTML, and thus malicious content
+        if (val.startsWith("<")) {
+            throw 'Error attempting to inject HTML into the page, this is a security risk and should be avoided.'
+        }
         //notice this set-up nicely allows for nested vdom expressions (e.g. we can return another vdom template literal based on some
         //Javascript expression within another vdom)
         const readerNewExpression = new Reader(val, reader.specialCharacters);

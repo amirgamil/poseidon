@@ -154,6 +154,6 @@ test('testHTMLElementParsing', t => {
 
     //test template literals called inside value of an attribute
     const test = html`<p class="hello ${2 + 2} ${1 + 1}"></p>`;
-    t.is(test.attributes.class, "hello 4 2c")
+    t.is(test.attributes.class, "hello 4 2")
     
 });
