@@ -236,6 +236,13 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
         //note we use a similar heuristic to the React diffing algorithm here - since the nodes are different
         //we rebuild the entire tree at this node
         updateQueue.push({op: REPLACE, details: {dom: nodeDOM, previous: prevVNode, node: newVNode}});
+        //if we have operations in our queue (i.e. length is greater than 1 since we just pushed an op) we have not yet performed then we defer 
+        //performing the work until we have processed all of the children to reduce side-effects of altering the DOM.
+        //Note we don't need to do this if there are no operations we need to perform since if the queue
+        //is empty, we can be confident there are no past operations that will introduce side-effects by altering the current state of the DOM
+        if (updateQueue.length !== 1) {
+            return node;
+        }
     }
 
     //Done diffing so we can now render the updates
