@@ -200,4 +200,16 @@ test('displayButton', t => {
     const sheetAfterRender = document.styleSheets[0];
     t.deepEqual(prevStyleSheet, sheetAfterRender);
     
+    console.log(css`
+        .line {
+            width: calc(100% - 0.5em);
+            height: 2px;
+            background: var(--fg);
+            position: relative;
+        }
+        #div::after {
+            transform: translate(-63%, 35px);
+            content: ${true ? `cheeky` : `not cheeky`};
+        }
+    `.rules[1].rules);
 });

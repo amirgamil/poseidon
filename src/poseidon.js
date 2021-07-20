@@ -813,6 +813,15 @@ class Router {
     get currentRoute() {
         return this.currentPath;
     }
+    //gets the query parameters of the form ?var1=val1&var2=val2... from a route
+    getQueryParameters(queryParameters, routeParams) {
+        const urlSearchParams = new URLSearchParams(queryParameters);
+        const dictParams = Object.fromEntries(urlSearchParams.entries());
+        Object.keys(dictParams).forEach(key => {
+            routeParams[key] = dictParams[key];
+        });
+    }
+
 
     //route-matching algorithm
     //listener method for when the URL or hash changes to map to the new appropriate view
@@ -831,6 +840,10 @@ class Router {
                                             return allParams;
                                             }, {});
                 this.currentPath = path;
+                //check if we have any query parameters to parse
+                if (window.location.search) {
+                    this.getQueryParameters(window.location.search, routeParams);
+                }
                 handler(route, routeParams);
                 //we don't want to execute more than route once we've matched one
                 //if it can match multiple ones so we break
