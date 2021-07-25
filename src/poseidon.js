@@ -625,12 +625,8 @@ class List extends Component {
                 //recall that initializing a new element will call render the first time, meaning 
                 //we will be able to access the DOM node of this new element below
                 const domNode = new this.domElement(element, this.remove);
-                //note we pass the DOM nodes of the rendered component so that each defined component (i.e. domElement above) has 
-                //a reference to the actual DOM node being displayed on the web page. If we passed in a vDOM node, then 
-                //our rendering logic would instantiate a new DOM node and add it to the page but the component 
-                //(elemnt of a list) would not have a reference to this DOM node locally and would not be able update 
-                //changes (on the web page) reflected to its state (and a goal of Poseidon is that we have self-managing components 
-                //so should be able to display changes to changes in atomic data directly within our own component)
+                //set the value in our items map to an instance of the actual (Poseidon) component
+                //This allows us to grab specific components and update them in a higher-order component
                 this.items.set(element, domNode.node);
             } 
         })
@@ -640,12 +636,24 @@ class List extends Component {
                 this.items.delete(key);
             } 
         }
-        this.nodes = Array.from(this.items.values()); 
+        //note althought we create an array from instances of our list item components, recall
+        //when we instantiated them above, it will have made a call to render so will have access
+        //to it's predefined DOM node. In our rendering logic, when we see this, we return the
+        //DOM node directly, as opposed to trying to create a DOM node from our vDOM. 
+        //This is an important subtelty because if we were to do the latter, we (i.e. a Poseidon component) would not have
+        //a reference to the DOM node locally, thus would not be able to update any changes (on the web page)
+        //reflected to its state (and a goal of Poseidon is that we have self-managing components 
+        //so should be able to display changes to changes in atomic data directly within our own component)
+        this.nodes = Array.from(this.items.values())
         this.render(this.nodes);
     }
 
     get type() {
         return this._atomClass;
+    }
+
+    get size() {
+        return this.items.size;
     }
 
     create(data) {
@@ -795,7 +803,7 @@ class Router {
     //constructor takes an object which maps names of routes to their corresponding path
     //when passing routes, make sure to pass more general routes later since Poseidon will match them
     //in that order
-    constructor() {
+    constructor(numRoutes = 0) {
         this.routes = new Map();        
         //set the pathname of the current route
         this.currentPath = window.location.pathname;
@@ -803,6 +811,8 @@ class Router {
             context: window,
             startListening: true
         }
+        this.numRoutes = numRoutes;
+        this.numRegistered = 0;
         this.matchHelper = () => {
             return this.match(window.location.pathname);
         }
@@ -813,7 +823,8 @@ class Router {
     get currentRoute() {
         return this.currentPath;
     }
-    //gets the query parameters of the form ?var1=val1&var2=val2... from a route
+
+    //gets the query parameters from a route
     getQueryParameters(queryParameters, routeParams) {
         const urlSearchParams = new URLSearchParams(queryParameters);
         const dictParams = Object.fromEntries(urlSearchParams.entries());
@@ -821,7 +832,6 @@ class Router {
             routeParams[key] = dictParams[key];
         });
     }
-
 
     //route-matching algorithm
     //listener method for when the URL or hash changes to map to the new appropriate view
@@ -839,6 +849,7 @@ class Router {
                                             allParams[params[index]] = value;
                                             return allParams;
                                             }, {});
+                //split parameters using the ?varName=varVal 
                 this.currentPath = path;
                 //check if we have any query parameters to parse
                 if (window.location.search) {
@@ -847,7 +858,7 @@ class Router {
                 handler(route, routeParams);
                 //we don't want to execute more than route once we've matched one
                 //if it can match multiple ones so we break
-                break
+                break;
             }
 
         }
@@ -868,6 +879,8 @@ class Router {
 
     //used to map paths to handler functions which will get executed when navigated to
     on(...pageRoutes) {
+        //increment the number of routes registered
+        this.numRegistered += 1;
         for (const {route, handler} of pageRoutes) {
             if (Array.isArray(route)) {
                 for (const path of route) {
@@ -879,8 +892,10 @@ class Router {
                 this.routes.set(route, {pathRoute: regPath, handler: handler, params: params})
             }
         }
-        //route the current url
-        this.match(window.location.pathname);
+        //route the current url once we've registed all the handlers
+        if (this.numRegistered === this.numRoutes) {
+            this.match(window.location.pathname);
+        }
     } 
 }
 
