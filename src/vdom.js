@@ -25,19 +25,23 @@ class Reader {
     getNextWord(includeQuotes = false) {
         var currIndex = this.index;
         var finalIndex = currIndex;
-        var quoteCount = 0;
+        const quoteCount = [0, ""];
         //keep looping while we don't encounter a special character of if we're inside a quote
-        while ((this.index < this.length) && (!this.specialCharacters.has(this.currentChar) || (!includeQuotes && quoteCount === 1))) {
+        while ((this.index < this.length) && (!this.specialCharacters.has(this.currentChar) || (!includeQuotes && quoteCount[0] === 1))) {
             //if we have quotes, skip them
             //TODO: add more robust type checking we have the same type of quote
             if (!includeQuotes && (this.currentChar === '"' || this.currentChar === "'")) {
                 //adjust starting point of returned work if we encounter an opening quote
-                if (quoteCount === 0) { 
-                    quoteCount += 1;
+                if (quoteCount[0] === 0) { 
+                    quoteCount[0] += 1;
+                    quoteCount[1] = this.currentChar;
                     currIndex = this.index + 1;
-                } else if (quoteCount === 1) {
-                    finalIndex = this.index - 1;
-                    quoteCount += 1;
+                } else if (quoteCount[0] === 1) {
+                    //check we have the same type of quotes
+                    if (quoteCount[1] === this.currentChar) {
+                        finalIndex = this.index - 1;
+                        quoteCount[0] += 1;
+                    }
                 }  
             } else if (this.currentChar === '/') {
                 //handle special case where next word might be adjacent to a /> tag so return the word before
@@ -49,7 +53,7 @@ class Reader {
             } 
             this.consume();
         }
-        if (quoteCount == 1) { 
+        if (quoteCount[0] == 1) { 
             throw 'Error parsing quotes as values!';
         }
 
@@ -172,7 +176,7 @@ const parseJSExpr = (reader, values, attribute) => {
     //What's a cleaner way of doing this
     var val = values.shift();
     //if the value returns null we don't want to render anything
-    if (val) {
+    if (val !== null && val !== undefined) {
         //if this is a JSX expression associated with some key, return the value obtained directly instead of parsing it as a HTML node
         if (attribute) {
             reader.skipSpaces();

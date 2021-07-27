@@ -803,7 +803,7 @@ class Router {
     //constructor takes an object which maps names of routes to their corresponding path
     //when passing routes, make sure to pass more general routes later since Poseidon will match them
     //in that order
-    constructor(numRoutes = 0) {
+    constructor(numHandlers = 0) {
         this.routes = new Map();        
         //set the pathname of the current route
         this.currentPath = window.location.pathname;
@@ -811,7 +811,9 @@ class Router {
             context: window,
             startListening: true
         }
-        this.numRoutes = numRoutes;
+        //corresponds to the number of HANDLERS you register, note this is NOT no. of routes since you can have one handler
+        //for several routes
+        this.numHandlers = numHandlers;
         this.numRegistered = 0;
         this.matchHelper = () => {
             return this.match(window.location.pathname);
@@ -893,7 +895,7 @@ class Router {
             }
         }
         //route the current url once we've registed all the handlers
-        if (this.numRegistered === this.numRoutes) {
+        if (this.numRegistered === this.numHandlers) {
             this.match(window.location.pathname);
         }
     } 

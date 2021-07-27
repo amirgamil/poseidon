@@ -156,4 +156,12 @@ test('testHTMLElementParsing', t => {
     const test = html`<p class="hello ${2 + 2} ${1 + 1}"></p>`;
     t.is(test.attributes.class, "hello 4 2")
     
+    //test to check a JSX expression which evaluates to smt empty does not return null
+    const inClassDef = html`<p class = "hello ${false ? "yep" : ""}">${false ? "yep" : ""}</p>`
+    t.is(inClassDef.attributes.class, "hello ");
+
+    //test an appostrophe to make sure we parse quotes properly
+    const apo = html`<p class = "hello I'm an apostrophe"></p>`
+    t.is(apo.attributes.class, "hello I'm an apostrophe");
+    
 });
