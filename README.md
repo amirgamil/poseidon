@@ -1,14 +1,21 @@
 # Poseidon  🔱
 ### Intro
-Poseidon is, to use a nice description by Reef, an anti-framework. It's a a no-dependency, component-based Javascript framework for rendering UI on the web. It aims at being lightweight, fast, and intuitive (i.e. easy to use) for building static and dynamic apps without compromising on performance and core features.
+Poseidon is, to use a nice description by [Reef](https://reefjs.com/), an anti-framework. It's a a no-dependency, component-based, and lightweight Javascript framework for rendering UI on the web. It aims at being lightweight, fast, and intuitive (i.e. easy to use) for building static and dynamic apps without compromising on performance and core features.
 
 Currently testing it building a bunch of cool stuff - will clean up everything and add detailed documentation soon...
+
+Some websites in production that use Poseidon:
+- [Conway's game of life](https://gameoflifeposeidon.surge.sh/)
+- [Welkin](https://welkin.surge.sh/)
+- [Zeus](https://zeus.amirbolous.com/)
+- [Apollo](http://apollo.amirbolous.com/)
+- [Mercury](https://mymercury.surge.sh/)
 
 Principles of least power - aims at offering as many of the rich features provided by frameworks like React and Bacbone while reducing as much as possible the overheads or levels of abstractions one needs to traverse in order to build cool stuff using the tool. In other words, if you can grasp a handful of small patterns that frequently crop-up, you can build really powerful tools. 
 
 To allow for a declarative, event-driven framework through which we interact with the UI, Poseidon distinguishes between UI that gets rendered and data that powers the UI. This takes a similar flavor to the model-view approach adopted by Backbone and more generally, the model-view-controller pattern. This allows us to encapsulate logic needed to update data when changes are made, so that we can decompose the changing data from the reusable DOM elements of the UI that should reflect those changes. 
 
-Concretely, this means that Poseidon provides a layer that interfaces with the UI in the forms of CollectionStores. This 
+Concretely, this means that Poseidon provides a layer that interfaces with the UI in the forms of CollectionStores. 
 
 In this way, Poseidon makes it very easy to both distinguish, maintain, and interface the data that powers applications with the UI that gets rendered accordingly. 
 
@@ -46,8 +53,14 @@ central stores or state becoming too clunky and unmanageable (some common compla
 10. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
 
 ### Cool Features
-1. Component-specific styles, even if defined in general terms, will only affect those that exist in the current component! (component-specific styles should always be at the top of the css template literal)
+1. Self-managing components
+2. Easy to use client-side router
+3. 0 dependencies! 
+4. Component-specific styles, even if defined in general terms, will only affect those that exist in the current component! (component-specific styles should always be at the top of the css template literal)
     - Supports arbitrary nesting, pseudoelements, pseudoselectors, media/keyframes, and conditional rendering based on ternary conditions or state!
+5. Can add JS expression in component-styles since Poseidon uses a custom css-like markup language!
+6. JSX-like markup language so does not sacrifice the declarative feel of JSX react or raw HTML when building components
+7. Fast virtual DOM with an in-house reconciliation algorithm
 
 ### Differences to Torus
 1. Urgonomics of bindings, inferred to be implicit if none provided. Similar idea with defining data sources, bindings and definitions.
