@@ -38,8 +38,8 @@ function updateDOMProperties(node, prevVNode, nextVNode) {
     var attributes = nextVNode.attributes || []
     //helper method that sets an attribute 
     const setAttributeHelper = (key, val) => {
-        //check if an ISL attribute was already mutated from DOM manipulation, in which case don't set it
-        //otherwise may produce unintended DOM side-effects (e.g. changing the value of selectionStart)
+        //check if an IDL attribute was already mutated from DOM manipulation (e.g. text of inpug tag), then don't
+        //set it otherwise may produce unintended DOM side-effects (e.g. changing the value of selectionStart)
         if (key && node[key] === val) {
             return;
         }
@@ -187,8 +187,8 @@ const renderVDOM = (newVNode, prevVNode, nodeDOM) => {
                 const count = Math.max(newVNode.children.length, prevVNode.children.length);
                 const domChildren = nodeDOM ? nodeDOM.childNodes : [];
                 for (let i = 0; i < count; i++) {
-                    newChild = newVNode.children[i];
-                    prev = prevVNode.children[i]; 
+                    const newChild = newVNode.children[i];
+                    const prev = prevVNode.children[i]; 
                     //note there are two cases to consider here, either we have a child in our DOM tree (that is domChildren[i] is NOT
                     //undefined) or we don't. If we won't have a DOM child, there are two subcases a) newVNode doesn't exist
                     //or b) prevVnode doesn't exist.
@@ -306,8 +306,6 @@ const parseCSSJSON = (JSONCSS, containerHash, styleRules, specialTag = false) =>
     //represents the set of rules for the current selector at this level of our tree  
     //only add rules at the current level, if this is not a special tag
     textForCurrentSelector = cssTag + " { \n";
-    if (!specialTag) {
-    }
     rules.forEach((item, _) => {
         //check if this is a rule or a nested CSS JSON object
         if (item.key) {
@@ -371,7 +369,7 @@ class Component {
         }
         //store object of {source, handler} to remove when taking down a component
         //note, intentionally only store one source and handler for encapsulation
-        this.event = {};
+        this.events = {};
         //`this.data` is a reserved property for passing into create to reduce side-effects and allow components to create UI without
         //having to rely on getting the data from elsewhere (can define in it in `init` method of a user-defined component)
         //call render if a component has not already been initialized with a fully-fledged, ready DOM node 
@@ -435,8 +433,9 @@ class Component {
         if (!globalStyleSheet) {
             this.regenerateStyleSheet();
         } 
-        //note by design we don't check if state has changed and re-generate/re-inject all of the styles
-        //Poseidon's API
+        //note by design we don't check if state has changed and re-generate/re-inject all of the styles for 
+        //since if a state change requires a change in styling, it probably requires a page reload
+        //in which case the stylesheet would be regenerated
     }
 
     //generates a new stylesheet and injects all of the styles into the page. This operation is expensive
@@ -483,7 +482,6 @@ class Component {
         }         
         //create virtual DOM node
         const newVdom = this.create(data); 
-        //TODO: fix this, can't use insertRule if element is not already in the DOM
         //apply any user-defined styles if applicable (do this before we render in case any user-generated styles
         //need to add any properties to the outer vDOM node e.g. a unique id)
         this.addStyle(newVdom);
@@ -586,7 +584,6 @@ class Atom extends Listening {
  
 //Lists are backed by collection data stores (middle man between database and the UI) to map collections to the UI
 class List extends Component {
-    //fix constructor with args
     constructor(item, store, remove, ...args) {
         //call super method
         super(...args);
@@ -608,7 +605,7 @@ class List extends Component {
         //domElement is the unit of component that will render each individual element of a list 
         this.domElement = item;
         //backed by Javascript Map since maintains order and implements iterable interface, allowing easy manipulation when looping
-        //this items maps atoms as keys to DOM nodes as values. This prevents us having to re-render all DOM list elements, and only
+        //`this.items` maps atoms as keys to DOM nodes as values. This prevents us having to re-render all DOM list elements, and only
         //re-render the elements that have changed or the ones that need to be added
         this.items = new Map();
         this.nodes = [];
@@ -627,7 +624,7 @@ class List extends Component {
                 const domNode = new this.domElement(element, this.remove);
                 //set the value in our items map to an instance of the actual (Poseidon) component
                 //This allows us to grab specific components and update them in a higher-order component
-                this.items.set(element, domNode.node);
+                this.items.set(element, domNode);
             } 
         })
         //loop over map and remove old elements
@@ -712,7 +709,11 @@ class CollectionStore extends Listening {
     }
 
     summarize() {
-        return JSON.stringify(this.data);
+        var jsonData = [...this.data];
+        jsonData.forEach((val, i) => {
+            jsonData[i] = val.summarize();
+        })
+        return jsonData;
     }
 
     add(newData) {
@@ -783,7 +784,7 @@ const getRegexFromRouteString = (route) => {
     //with corresponding regex bits to match any possible values
     route = route.replace(/[:*](\w+)/g, (full, paramName, _) => {
         paramNames.push(paramName);
-        //replace any paramname with a regex to match any value (since any value can be passed in as a parameter e.g. any user!)
+        //replace any paramname with a regex to match any value (since /:user can match /bob or /rob or /anything)
         //matches any character that is not a /
         return '([^\/]+)'
     });
@@ -851,7 +852,6 @@ class Router {
                                             allParams[params[index]] = value;
                                             return allParams;
                                             }, {});
-                //split parameters using the ?varName=varVal 
                 this.currentPath = path;
                 //check if we have any query parameters to parse
                 if (window.location.search) {

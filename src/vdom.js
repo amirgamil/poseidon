@@ -359,7 +359,8 @@ const parseCSStringToDict = (reader, dict, selector, values) => {
             console.log(reader.string.substring(reader.index));
             throw 'Error, unexpected end of expression found!';    
         }
-        //check if this is JS expression
+        //check if this is JS expression - recall `{` and `}` are special tags in our css reader
+        //so act like `<` and `>` in our html parser meaning our reader will stop if it encounters them
         if (word === '{') {
             //consume the { token
             reader.consume();

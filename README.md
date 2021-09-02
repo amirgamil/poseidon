@@ -51,6 +51,7 @@ central stores or state becoming too clunky and unmanageable (some common compla
     ```${shouldLoad ? html`<h1>Unlocked!</h1>` : html`<h1>Locked :( </h1>`}```
     (if you want to map samle handler to different paths, do `['path1', 'path2'].forEach(path => router.on(path, handler)))`
 10. Passing relevant bits of data to the handler if applicable so that components can make user of parameters/data 
+11. Passing a remove call back (which is just a function in the higher component that handles removing it and updating state accordingly) from a higher order component if you want to be able to remove a current component
 
 ### Cool Features
 1. Self-managing components
@@ -90,6 +91,9 @@ custom functionality with a handler if necessary
     a. Diffing algorithm to figure out what's changed and render it accordingly
 
 
-### Things that need to be looked into
-1. Component life-cycle updates
-2. Functional components
+### Things I forget that may need to change
+1. Regenerating styles when state changes - (how, not sure?), Styles bug where you initialize component with styles AFTER stylesheet has been generated?  
+2. Pass collection data source into a list (and optional callback to)
+call when items need to change
+3. setStore for collection data source should pass in Atomic data
+4. Make update for atom more versatile - what if you want to update a specific index of a property?
