@@ -1,4 +1,3 @@
-//eventually put stuff here to require as entry to module 
 const {
     Component,
     List,
@@ -11,11 +10,10 @@ const {
 } = require("./poseidon.js")
 
 const {
-    vdom
+    html
 } = require("./vdom.js");
 
-const exports = {
-    renderVDOM,
+export {
     Component,
     List,
     Atom,
@@ -24,5 +22,5 @@ const exports = {
     CollectionStoreOf,
     Router,
     css,
-    vdom 
-} = module.exports;
+    html 
+};

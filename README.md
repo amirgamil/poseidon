@@ -97,3 +97,4 @@ custom functionality with a handler if necessary
 call when items need to change
 3. setStore for collection data source should pass in Atomic data
 4. Make update for atom more versatile - what if you want to update a specific index of a property?
+5. Add key-based reconciliation for list items?
