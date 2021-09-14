@@ -1,4 +1,7 @@
 # Poseidon  🔱
+![poseidon-npm](https://img.shields.io/npm/v/poseidon-ui-framework.svg)
+![gzip-size](https://img.badgesize.io/https:/unpkg.com/poseidon-ui-framework/dist/bundle.js?compression=gzip)
+![npm-install-size](https://packagephobia.com/badge?p=poseidon-ui-framework)
 ### Intro
 Poseidon is, to use a nice description by [Reef](https://reefjs.com/), an anti-framework. It's a a no-dependency, component-based, and lightweight Javascript framework for rendering UI on the web. It aims at being lightweight, fast, and intuitive (i.e. easy to use) for building static and dynamic apps without compromising on performance and core features.
 
